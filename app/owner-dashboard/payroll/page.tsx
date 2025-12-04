@@ -23,6 +23,20 @@ type PayrollRecord = {
   payoutDate: string
 }
 
+type Employee = {
+  id: number
+  employeeCode: string
+  fullName: string
+  role: string
+  department: string
+  baseSalary: number
+}
+
+type PayrollFiltersResponse = {
+  departments?: string[]
+  statuses?: string[]
+}
+
 const columns = [
   { key: "id", label: "ID", sortable: true },
   { key: "employee", label: "Xodim", sortable: true },
@@ -57,8 +71,9 @@ export default function OwnerPayrollPage() {
     notes: "",
   })
   const [newEmployee, setNewEmployee] = useState({
+    employeeId: "",
     employee: "",
-    department: "Ishlab chiqarish",
+    department: "",
     role: "",
     month: new Date().toLocaleDateString("uz-UZ", { month: "long", year: "numeric" }),
     baseSalary: "",
@@ -70,6 +85,9 @@ export default function OwnerPayrollPage() {
   const [isPaying, setIsPaying] = useState(false)
   const [addEmployeeError, setAddEmployeeError] = useState<string | null>(null)
   const [isAddingEmployee, setIsAddingEmployee] = useState(false)
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [payrollDepartments, setPayrollDepartments] = useState<string[]>([])
+  const [payrollStatuses, setPayrollStatuses] = useState<string[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -78,7 +96,14 @@ export default function OwnerPayrollPage() {
       setIsLoading(true)
       setError(null)
       try {
-        const response = await get<PayrollRecord[] | { items?: PayrollRecord[] }>("/payroll")
+        const response = await get<PayrollRecord[] | { items?: PayrollRecord[] }>("/payroll", {
+          params: {
+            dateFrom: filters.dateFrom,
+            dateTo: filters.dateTo,
+            department: filters.department === "all" ? undefined : filters.department,
+            status: filters.status === "all" ? undefined : filters.status,
+          },
+        })
         if (cancelled) return
         const items = Array.isArray(response) ? response : response.items ?? []
         setRecords(items)
@@ -99,6 +124,52 @@ export default function OwnerPayrollPage() {
     }
 
     fetchPayroll()
+
+    return () => {
+      cancelled = true
+    }
+  }, [filters.dateFrom, filters.dateTo, filters.department, filters.status])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchMeta = async () => {
+      try {
+        const [filtersResponse, employeesResponse, employeesFiltersResponse] = await Promise.all([
+          get<PayrollFiltersResponse>("/payroll/filters"),
+          get<Employee[] | { items?: Employee[] }>("/employees", {
+            params: {
+              department: "",
+              role: "",
+              active: true,
+            },
+          }),
+          get<{ departments: string[]; roles: string[] }>("/employees/filters"),
+        ])
+
+        if (cancelled) return
+
+        const payrollDeps = filtersResponse.departments ?? []
+        const payrollStats = filtersResponse.statuses ?? []
+        setPayrollDepartments(payrollDeps)
+        setPayrollStatuses(payrollStats)
+
+        const employeeItems = Array.isArray(employeesResponse)
+          ? employeesResponse
+          : employeesResponse.items ?? []
+        setEmployees(employeeItems)
+
+        // If department not yet set in new employee state, default from first department filter
+        setNewEmployee((prev) => ({
+          ...prev,
+          department: prev.department || employeesFiltersResponse.departments?.[0] || "",
+          role: prev.role || employeesFiltersResponse.roles?.[0] || "",
+        }))
+      } catch {
+      }
+    }
+
+    fetchMeta()
 
     return () => {
       cancelled = true
@@ -171,10 +242,7 @@ export default function OwnerPayrollPage() {
               onChange={(department) => setFilters((prev) => ({ ...prev, department }))}
               options={[
                 { value: "all", label: "Barchasi" },
-                { value: "Ishlab chiqarish", label: "Ishlab chiqarish" },
-                { value: "HR", label: "HR" },
-                { value: "Texnik bo'lim", label: "Texnik bo'lim" },
-                { value: "Transport", label: "Transport" },
+                ...payrollDepartments.map((d) => ({ value: d, label: d })),
               ]}
             />
           </div>
@@ -185,9 +253,7 @@ export default function OwnerPayrollPage() {
               onChange={(status) => setFilters((prev) => ({ ...prev, status }))}
               options={[
                 { value: "all", label: "Barchasi" },
-                { value: "To'langan", label: "To'langan" },
-                { value: "Jarayonda", label: "Jarayonda" },
-                { value: "Tasdiq kutmoqda", label: "Tasdiq kutmoqda" },
+                ...payrollStatuses.map((s) => ({ value: s, label: s })),
               ]}
             />
           </div>
@@ -422,8 +488,9 @@ export default function OwnerPayrollPage() {
         onClose={() => {
           setIsAddEmployeeModalOpen(false)
           setNewEmployee({
+            employeeId: "",
             employee: "",
-            department: "Ishlab chiqarish",
+            department: "",
             role: "",
             month: new Date().toLocaleDateString("uz-UZ", { month: "long", year: "numeric" }),
             baseSalary: "",
@@ -443,17 +510,41 @@ export default function OwnerPayrollPage() {
             setAddEmployeeError(null)
 
             try {
-              const payload = {
-                name: newEmployee.employee,
-                department: newEmployee.department,
-                role: newEmployee.role,
-                baseSalary: Number(newEmployee.baseSalary) || 0,
+              if (!newEmployee.employeeId) {
+                setAddEmployeeError("Xodim tanlanmagan")
+                return
               }
 
-              await post("/employees", payload)
+              const selected = employees.find((e) => String(e.id) === newEmployee.employeeId)
+
+              const now = new Date()
+              const year = now.getFullYear()
+              const month = now.getMonth() + 1
+              const monthLabel = `${year} M${String(month).padStart(2, "0")}`
+
+              const payload = {
+                employeeId: Number(newEmployee.employeeId),
+                year,
+                month,
+                monthLabel,
+                baseSalary:
+                  newEmployee.baseSalary !== "" ? Number(newEmployee.baseSalary) || 0 : selected?.baseSalary || 0,
+                overtime: Number(newEmployee.overtime) || 0,
+                deductions: Number(newEmployee.deductions) || 0,
+                advance: Number(newEmployee.advance) || 0,
+              }
+
+              await post("/payroll", payload)
 
               try {
-                const response = await get<PayrollRecord[] | { items?: PayrollRecord[] }>("/payroll")
+                const response = await get<PayrollRecord[] | { items?: PayrollRecord[] }>("/payroll", {
+                  params: {
+                    dateFrom: filters.dateFrom,
+                    dateTo: filters.dateTo,
+                    department: filters.department === "all" ? undefined : filters.department,
+                    status: filters.status === "all" ? undefined : filters.status,
+                  },
+                })
                 const items = Array.isArray(response) ? response : response.items ?? []
                 setRecords(items)
               } catch {
@@ -461,8 +552,9 @@ export default function OwnerPayrollPage() {
 
               setIsAddEmployeeModalOpen(false)
               setNewEmployee({
+                employeeId: "",
                 employee: "",
-                department: "Ishlab chiqarish",
+                department: "",
                 role: "",
                 month: new Date().toLocaleDateString("uz-UZ", { month: "long", year: "numeric" }),
                 baseSalary: "",
@@ -486,38 +578,37 @@ export default function OwnerPayrollPage() {
         >
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Xodim ismi</label>
-            <input
-              type="text"
-              value={newEmployee.employee}
-              onChange={(e) => setNewEmployee((prev) => ({ ...prev, employee: e.target.value }))}
-              className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-              placeholder="Masalan: Alisher Karimov"
-              required
+            <SelectField
+              value={newEmployee.employeeId}
+              onChange={(employeeId) => {
+                const selected = employees.find((e) => String(e.id) === employeeId)
+                setNewEmployee((prev) => ({
+                  ...prev,
+                  employeeId,
+                  employee: selected?.fullName || "",
+                  department: selected?.department || prev.department,
+                  role: selected?.role || prev.role,
+                  baseSalary:
+                    prev.baseSalary || (selected?.baseSalary != null ? String(selected.baseSalary) : prev.baseSalary),
+                }))
+              }}
+              options={employees.map((e) => ({
+                value: String(e.id),
+                label: `${e.fullName} (${e.employeeCode})`,
+              }))}
             />
           </div>
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Bo'lim</label>
-            <SelectField
-              value={newEmployee.department}
-              onChange={(department) => setNewEmployee((prev) => ({ ...prev, department }))}
-              options={[
-                { value: "Ishlab chiqarish", label: "Ishlab chiqarish" },
-                { value: "HR", label: "HR" },
-                { value: "Texnik bo'lim", label: "Texnik bo'lim" },
-                { value: "Transport", label: "Transport" },
-              ]}
-            />
+            <div className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg bg-slate-50 text-sm text-[#0F172A]">
+              {newEmployee.department || "Xodim tanlang"}
+            </div>
           </div>
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Lavozim</label>
-            <input
-              type="text"
-              value={newEmployee.role}
-              onChange={(e) => setNewEmployee((prev) => ({ ...prev, role: e.target.value }))}
-              className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-              placeholder="Masalan: Smena boshlig'i"
-              required
-            />
+            <div className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg bg-slate-50 text-sm text-[#0F172A]">
+              {newEmployee.role || "Xodim tanlang"}
+            </div>
           </div>
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Oyi</label>
@@ -592,8 +683,9 @@ export default function OwnerPayrollPage() {
               onClick={() => {
                 setIsAddEmployeeModalOpen(false)
                 setNewEmployee({
+                  employeeId: "",
                   employee: "",
-                  department: "Ishlab chiqarish",
+                  department: "",
                   role: "",
                   month: new Date().toLocaleDateString("uz-UZ", { month: "long", year: "numeric" }),
                   baseSalary: "",

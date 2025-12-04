@@ -1,7 +1,8 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { ApiError, get } from "@/styles/lib/api"
 
 const timelineData = [
   { date: "2024-01-02", produced: 145, sold: 118, expenses: 23000, payroll: 9000, machineUsage: 15 },
@@ -14,27 +15,32 @@ const timelineData = [
   { date: "2024-02-19", produced: 225, sold: 194, expenses: 31400, payroll: 11000, machineUsage: 25 },
 ]
 
-const productRuns = [
-  { batchId: "BCH-240201", product: "M400", shift: "Tonggi", produced: 120, line: "Press A", producedAt: "2024-02-19T08:30:00", status: "Yakunlandi" },
-  { batchId: "BCH-240198", product: "M500", shift: "Kechgi", produced: 95, line: "Press B", producedAt: "2024-02-18T19:10:00", status: "Yakunlandi" },
-  { batchId: "BCH-240196", product: "Sulfatga chidamli", shift: "Kunduzgi", produced: 75, line: "Press C", producedAt: "2024-02-18T13:05:00", status: "Yakunlandi" },
-  { batchId: "BCH-240190", product: "M400", shift: "Tonggi", produced: 118, line: "Press A", producedAt: "2024-02-17T08:20:00", status: "Nazoratda" },
-]
+type ProductionBatch = {
+  batchId: string
+  product: string
+  shift: string
+  line: string
+  quantity: number
+  unit: string
+  producedAt: string
+}
 
-const expenseHighlights = [
-  { id: "EXP-901", title: "Energiya sarfi", category: "Energiya", amount: 12400, date: "2024-02-18" },
-  { id: "EXP-902", title: "Xom ashyo logistika", category: "Logistika", amount: 8700, date: "2024-02-17" },
-  { id: "EXP-903", title: "Texnik xizmat", category: "Texnik", amount: 5400, date: "2024-02-15" },
-  { id: "EXP-904", title: "Ishchilar bonus", category: "Ish haqi", amount: 3600, date: "2024-02-14" },
-]
+type Expense = {
+  id: string
+  title?: string
+  category: string
+  amount: number
+  date: string
+}
 
-const vehicleMovements = [
-  { id: "TRUCK-001", driver: "Ahmed Karim", type: "Yirik yuk", purpose: "Ohaktosh", direction: "Kirdi", timestamp: "2024-02-19T09:15:00" },
-  { id: "TRUCK-014", driver: "Sardor N.", type: "Yirik yuk", purpose: "Mahsulot yuklash", direction: "Chiqdi", timestamp: "2024-02-19T07:40:00" },
-  { id: "TRUCK-021", driver: "Karim S.", type: "Kichik yuk", purpose: "Mahsulot yetkazish", direction: "Chiqdi", timestamp: "2024-02-18T18:20:00" },
-  { id: "TRUCK-009", driver: "Otabek U.", type: "Yirik yuk", purpose: "Gips kirim", direction: "Kirdi", timestamp: "2024-02-18T15:05:00" },
-  { id: "TRUCK-002", driver: "Jasur K.", type: "Kichik yuk", purpose: "Tayyor mahsulot", direction: "Chiqdi", timestamp: "2024-02-18T11:45:00" },
-]
+type VehicleLogEntry = {
+  vehicleIdCode: string
+  direction: string
+  material: string
+  driver: string
+  entryAt?: string
+  exitAt?: string
+}
 
 const dateFormatter = new Intl.DateTimeFormat("uz-UZ", { day: "2-digit", month: "short" })
 const dateTimeFormatter = new Intl.DateTimeFormat("uz-UZ", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
@@ -51,6 +57,15 @@ export default function OwnerDashboard() {
     dateFrom: timelineData[0].date,
     dateTo: timelineData[timelineData.length - 1].date,
   })
+  const [latestBatches, setLatestBatches] = useState<ProductionBatch[]>([])
+  const [batchesError, setBatchesError] = useState<string | null>(null)
+  const [isBatchesLoading, setIsBatchesLoading] = useState(false)
+
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [expensesError, setExpensesError] = useState<string | null>(null)
+
+  const [vehicleLogs, setVehicleLogs] = useState<VehicleLogEntry[]>([])
+  const [vehiclesError, setVehiclesError] = useState<string | null>(null)
 
   const withinRange = (dateStr: string) => {
     const current = new Date(dateStr).getTime()
@@ -61,14 +76,118 @@ export default function OwnerDashboard() {
     return afterFrom && beforeTo
   }
 
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchDashboardData = async () => {
+      setBatchesError(null)
+      setExpensesError(null)
+      setVehiclesError(null)
+
+      try {
+        setIsBatchesLoading(true)
+
+        const [batchesResponse, expensesResponse, vehiclesResponse] = await Promise.all([
+          get<ProductionBatch[] | { items?: ProductionBatch[] }>("/production/batches", {
+            params: {
+              dateFrom: filters.dateFrom,
+              dateTo: filters.dateTo,
+            },
+          }),
+          get<Expense[] | { items?: Expense[] }>("/expenses", {
+            params: {
+              dateFrom: filters.dateFrom,
+              dateTo: filters.dateTo,
+            },
+          }),
+          get<VehicleLogEntry[] | { items?: VehicleLogEntry[] }>("/vehicles/logs", {
+            params: {
+              dateFrom: filters.dateFrom,
+              dateTo: filters.dateTo,
+            },
+          }),
+        ])
+
+        if (cancelled) return
+
+        const batches = Array.isArray(batchesResponse) ? batchesResponse : batchesResponse.items ?? []
+        const sortedBatches = [...batches].sort((a, b) => {
+          const aTime = new Date(a.producedAt).getTime()
+          const bTime = new Date(b.producedAt).getTime()
+          if (aTime === bTime) {
+            return String(b.batchId).localeCompare(String(a.batchId))
+          }
+          return bTime - aTime
+        })
+        setLatestBatches(sortedBatches.slice(0, 4))
+
+        const expenseItems = Array.isArray(expensesResponse) ? expensesResponse : expensesResponse.items ?? []
+        setExpenses(expenseItems)
+
+        const vehicleItems = Array.isArray(vehiclesResponse) ? vehiclesResponse : vehiclesResponse.items ?? []
+        setVehicleLogs(vehicleItems)
+      } catch (err: any) {
+        if (cancelled) return
+
+        if (err instanceof ApiError) {
+          const backendMessage = (err.data && (err.data as any).message) || err.message || "Dashboard ma'lumotlarini yuklashda xatolik yuz berdi"
+          setBatchesError(backendMessage)
+        } else {
+          setBatchesError("Dashboard ma'lumotlarini yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+        }
+      } finally {
+        if (!cancelled) {
+          setIsBatchesLoading(false)
+        }
+      }
+    }
+
+    fetchDashboardData()
+
+    return () => {
+      cancelled = true
+    }
+  }, [filters.dateFrom, filters.dateTo])
+
+  const shiftToUzbekLabel = (shift: string) => {
+    switch (shift) {
+      case "DAY":
+        return "Kunduzgi smena"
+      case "NIGHT":
+        return "Kechgi smena"
+      case "MORNING":
+        return "Tonggi smena"
+      default:
+        return shift
+    }
+  }
+
+  const expenseSignals = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const e of expenses) {
+      const current = map.get(e.category) || 0
+      map.set(e.category, current + e.amount)
+    }
+
+    return Array.from(map.entries())
+      .map(([category, total]) => ({ category, total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 4)
+  }, [expenses])
+
   const filteredTimeline = useMemo(
     () => timelineData.filter((row) => withinRange(row.date)),
     [filters.dateFrom, filters.dateTo],
   )
 
   const filteredVehicles = useMemo(
-    () => vehicleMovements.filter((row) => withinRange(row.timestamp)),
-    [filters.dateFrom, filters.dateTo],
+    () =>
+      vehicleLogs.filter((row) => {
+        const timestamp = row.entryAt || row.exitAt
+        if (!timestamp) return false
+        return withinRange(timestamp)
+      }),
+    [vehicleLogs, filters.dateFrom, filters.dateTo],
   )
 
   const totals = useMemo(
@@ -149,45 +268,53 @@ export default function OwnerDashboard() {
             <h2 className="text-lg font-semibold text-slate-900">Oxirgi batchlar</h2>
             <span className="text-sm text-slate-500">So'nggi 4 ta partiya</span>
           </div>
+          {batchesError && <p className="mb-4 text-sm text-red-600">{batchesError}</p>}
           <div className="space-y-4">
-            {productRuns.map((batch) => (
-              <div key={batch.batchId} className="flex items-center justify-between border border-slate-200 rounded-2xl p-4 hover:bg-slate-50 transition-colors">
+            {latestBatches.map((batch) => (
+              <div
+                key={batch.batchId}
+                className="flex items-center justify-between border border-slate-200 rounded-2xl p-4 hover:bg-slate-50 transition-colors"
+              >
                 <div>
                   <p className="font-semibold text-slate-900">
                     {batch.batchId} · {batch.product}
                   </p>
                   <p className="text-sm text-slate-500">
-                    {batch.shift} smena · {batch.line} · {dateTimeFormatter.format(new Date(batch.producedAt))}
+                    {shiftToUzbekLabel(batch.shift)} · {batch.line} · {dateTimeFormatter.format(new Date(batch.producedAt))}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xl font-semibold text-slate-900">{batch.produced} t</p>
-                  <span
-                    className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                      batch.status === "Yakunlandi" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
-                    }`}
-                  >
-                    {batch.status}
-                  </span>
+                  <p className="text-xl font-semibold text-slate-900">
+                    {batch.quantity} {batch.unit}
+                  </p>
                 </div>
               </div>
             ))}
+            {!isBatchesLoading && latestBatches.length === 0 && !batchesError && (
+              <p className="text-sm text-slate-400">Tanlangan davr uchun batchlar topilmadi</p>
+            )}
           </div>
         </div>
 
         <div className="bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Rasxodlar bo'yicha signal</h2>
+          {expensesError && <p className="mb-2 text-sm text-red-600">{expensesError}</p>}
           <div className="space-y-4">
-            {expenseHighlights.map((expense) => (
-              <div key={expense.id} className="border border-slate-200 rounded-xl p-4 hover:bg-slate-50 transition-colors">
+            {expenseSignals.map((item) => (
+              <div
+                key={item.category}
+                className="border border-slate-200 rounded-xl p-4 hover:bg-slate-50 transition-colors"
+              >
                 <div className="flex items-center justify-between mb-1">
-                  <p className="font-semibold text-slate-900">{expense.title}</p>
-                  <span className="text-sm text-slate-500">{dateFormatter.format(new Date(expense.date))}</span>
+                  <p className="font-semibold text-slate-900">{item.category}</p>
                 </div>
-                <p className="text-sm text-slate-400 mb-2">{expense.category}</p>
-                <p className="text-lg font-semibold text-slate-900">{currencyFormatter.format(expense.amount)}</p>
+                <p className="text-sm text-slate-400 mb-2">Kategoriya bo'yicha umumiy sarf</p>
+                <p className="text-lg font-semibold text-slate-900">{currencyFormatter.format(item.total)}</p>
               </div>
             ))}
+            {expenseSignals.length === 0 && !expensesError && (
+              <p className="text-sm text-slate-400">Tanlangan davr uchun rasxodlar topilmadi</p>
+            )}
           </div>
         </div>
       </div>
@@ -205,6 +332,7 @@ export default function OwnerDashboard() {
             </Link>
           </div>
         </div>
+        {vehiclesError && <p className="mb-4 text-sm text-red-600">{vehiclesError}</p>}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -218,9 +346,14 @@ export default function OwnerDashboard() {
             </thead>
             <tbody>
               {filteredVehicles.length > 0 ? (
-                filteredVehicles.map((vehicle) => (
-                  <tr key={`${vehicle.id}-${vehicle.timestamp}`} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-900">{vehicle.id}</td>
+                filteredVehicles.map((vehicle) => {
+                  const timestamp = vehicle.entryAt || vehicle.exitAt
+                  return (
+                    <tr
+                      key={`${vehicle.vehicleIdCode}-${timestamp}`}
+                      className="border-b border-slate-100 hover:bg-slate-50"
+                    >
+                      <td className="px-4 py-3 font-medium text-slate-900">{vehicle.vehicleIdCode}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -232,11 +365,14 @@ export default function OwnerDashboard() {
                         {vehicle.direction}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-500">{vehicle.purpose}</td>
+                    <td className="px-4 py-3 text-slate-500">{vehicle.material}</td>
                     <td className="px-4 py-3 text-slate-900">{vehicle.driver}</td>
-                    <td className="px-4 py-3 text-slate-500">{dateTimeFormatter.format(new Date(vehicle.timestamp))}</td>
+                    <td className="px-4 py-3 text-slate-500">
+                      {timestamp ? dateTimeFormatter.format(new Date(timestamp)) : "-"}
+                    </td>
                   </tr>
-                ))
+                  )
+                })
               ) : (
                 <tr>
                   <td className="px-4 py-6 text-center text-slate-400" colSpan={5}>
