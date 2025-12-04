@@ -3,10 +3,12 @@
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/button"
 import { Modal } from "@/components/modal"
+import { FileDropzone } from "@/components/file-dropzone"
 import { useState } from "react"
 
 export default function EquipmentPage() {
   const [showAddEquipment, setShowAddEquipment] = useState(false)
+  const [photoName, setPhotoName] = useState("")
   const [equipment] = useState([
     {
       id: "EQ001",
@@ -114,8 +116,15 @@ export default function EquipmentPage() {
             <input type="date" className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#0F172A] mb-2">Photo</label>
-            <input type="file" accept="image/*" className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg" />
+            <FileDropzone
+              label="Photo"
+              accept="image/*"
+              valueText={photoName}
+              onFilesSelected={(files) => {
+                const file = files?.[0]
+                setPhotoName(file ? file.name : "")
+              }}
+            />
           </div>
           <Button type="submit" variant="primary" className="w-full">
             Register Equipment

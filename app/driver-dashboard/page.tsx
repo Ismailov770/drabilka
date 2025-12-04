@@ -1,6 +1,8 @@
 "use client"
 
 import { Button } from "@/components/button"
+import { FileDropzone } from "@/components/file-dropzone"
+import { ApiError, post } from "@/styles/lib/api"
 import { useState } from "react"
 
 export default function DriverDashboard() {
@@ -8,6 +10,10 @@ export default function DriverDashboard() {
   const [fuelGaugePhotoName, setFuelGaugePhotoName] = useState("")
   const [distance, setDistance] = useState("")
   const [speedometerPhotoName, setSpeedometerPhotoName] = useState("")
+  const [fuelGaugeFile, setFuelGaugeFile] = useState<File | null>(null)
+  const [speedometerFile, setSpeedometerFile] = useState<File | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   return (
     <div className="space-y-8">
@@ -21,19 +27,97 @@ export default function DriverDashboard() {
         <h2 className="text-lg font-semibold text-[#0F172A] mb-4">Yangi yoqilg'i hodisasi</h2>
         <form
           className="space-y-4"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault()
-            if (!fuelAmount || !distance || !fuelGaugePhotoName || !speedometerPhotoName) {
+            setError(null)
+
+            if (!fuelAmount || !distance || !fuelGaugeFile || !speedometerFile) {
               alert("Iltimos, summa, yurgan masofa, yoqilg'i datchigi va speedometr suratlarini kiriting")
               return
             }
-            alert(
-              `Yangi yoqilg'i hodisasi: ${fuelAmount} so'm, masofa: ${distance} km, yoqilg'i datchigi: ${fuelGaugePhotoName}, speedometr: ${speedometerPhotoName}`,
-            )
-            setFuelAmount("")
-            setDistance("")
-            setFuelGaugePhotoName("")
-            setSpeedometerPhotoName("")
+
+            try {
+              setIsSubmitting(true)
+
+              let driverId: string | null = null
+              if (typeof window !== "undefined") {
+                try {
+                  const raw = window.localStorage.getItem("authUser")
+                  if (raw) {
+                    const user = JSON.parse(raw) as { id?: string | number; driverId?: string | number }
+
+                    const candidateIds: Array<string | number | undefined | null> = [
+                      user.driverId,
+                      user.id,
+                    ]
+
+                    for (const candidate of candidateIds) {
+                      if (candidate === undefined || candidate === null) continue
+                      const n = Number(candidate)
+                      if (!Number.isNaN(n) && Number.isFinite(n)) {
+                        driverId = String(n)
+                        break
+                      }
+                    }
+                  }
+                } catch {
+                }
+              }
+
+              if (!driverId) {
+                setError(
+                  "Haydovchi identifikatori noto'g'ri formatda. Iltimos, tizimdan chiqib qayta kiring yoki administratorga murojaat qiling.",
+                )
+                setIsSubmitting(false)
+                return
+              }
+
+              const formData = new FormData()
+              formData.append("files", fuelGaugeFile)
+              formData.append("files", speedometerFile)
+
+              const uploadResponse = await post<{ urls: string[] }>("/uploads/images", formData, {
+                params: { category: "FUEL" },
+              })
+
+              const urls = uploadResponse.urls ?? []
+              const fuelGaugeUrl = urls[0]
+              const speedometerUrl = urls[1]
+
+              await post(
+                "/driver/fuel-records",
+                {
+                  amount: Number(fuelAmount) || 0,
+                  distanceKm: Number(distance) || 0,
+                  dateTime: new Date().toISOString(),
+                  fuelGaugePhotoName: fuelGaugeUrl,
+                  speedometerPhotoName: speedometerUrl,
+                },
+                {
+                  params: {
+                    driverId,
+                  },
+                },
+              )
+
+              alert("Yangi yoqilg'i hodisasi saqlandi")
+
+              setFuelAmount("")
+              setDistance("")
+              setFuelGaugePhotoName("")
+              setSpeedometerPhotoName("")
+              setFuelGaugeFile(null)
+              setSpeedometerFile(null)
+            } catch (err: any) {
+              if (err instanceof ApiError) {
+                const backendMessage = (err.data && (err.data as any).message) || err.message || "Yoqilg'i hodisasini saqlashda xatolik yuz berdi"
+                setError(backendMessage)
+              } else {
+                setError("Yoqilg'i hodisasini saqlashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+              }
+            } finally {
+              setIsSubmitting(false)
+            }
           }}
         >
           <div>
@@ -59,38 +143,37 @@ export default function DriverDashboard() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#0F172A] mb-2">Yoqilg'i datchigi surati</label>
-            <input
-              type="file"
+            <FileDropzone
+              label="Yoqilg'i datchigi surati"
               accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
+              required
+              valueText={fuelGaugePhotoName}
+              onFilesSelected={(files) => {
+                const file = files?.[0]
+                setFuelGaugeFile(file ?? null)
                 setFuelGaugePhotoName(file ? file.name : "")
               }}
-              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
-              required
             />
-            {fuelGaugePhotoName && (
-              <p className="text-xs text-[#64748B] mt-1">Tanlangan fayl: {fuelGaugePhotoName}</p>
-            )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#0F172A] mb-2">Speedometr surati</label>
-            <input
-              type="file"
+            <FileDropzone
+              label="Speedometr surati"
               accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
+              required
+              valueText={speedometerPhotoName}
+              onFilesSelected={(files) => {
+                const file = files?.[0]
+                setSpeedometerFile(file ?? null)
                 setSpeedometerPhotoName(file ? file.name : "")
               }}
-              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
-              required
             />
-            {speedometerPhotoName && (
-              <p className="text-xs text-[#64748B] mt-1">Tanlangan fayl: {speedometerPhotoName}</p>
-            )}
           </div>
-          <Button type="submit" variant="primary" className="w-full">
+          {error && (
+            <p className="text-sm text-red-600">
+              {error}
+            </p>
+          )}
+          <Button type="submit" variant="primary" className="w-full" disabled={isSubmitting}>
             Yoqilg'ini yuborish
           </Button>
         </form>

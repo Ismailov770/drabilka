@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 
 import { DataTable } from "@/components/data-table"
 import { Modal } from "@/components/modal"
+import { FileDropzone } from "@/components/file-dropzone"
 import { ApiError, get, post } from "@/styles/lib/api"
 
 type EquipmentMovement = {
@@ -354,14 +355,14 @@ export default function OwnerEquipmentFlowPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Surat</label>
-              <input
-                type="file"
-                value={newMovement.photo}
-                onChange={(e) => setNewMovement((prev) => ({ ...prev, photo: e.target.value }))}
-                accept=".png"
-                className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-                placeholder="PNG/JPG"
+              <FileDropzone
+                label="Surat"
+                accept="image/*"
+                valueText={newMovement.photo}
+                onFilesSelected={(files) => {
+                  const file = files?.[0]
+                  setNewMovement((prev) => ({ ...prev, photo: file ? file.name : "" }))
+                }}
               />
             </div>
           </div>

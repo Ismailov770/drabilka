@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@/components/button"
+import { FileDropzone } from "@/components/file-dropzone"
 import { useState } from "react"
 
 export default function TechnicalDashboard() {
@@ -69,18 +70,16 @@ export default function TechnicalDashboard() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#0F172A] mb-2">Foto / chek / hujjat surati</label>
-            <input
-              type="file"
+            <FileDropzone
+              label="Foto / chek / hujjat surati"
               accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
+              required
+              valueText={photoName}
+              onFilesSelected={(files) => {
+                const file = files?.[0]
                 setPhotoName(file ? file.name : "")
               }}
-              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
-              required
             />
-            {photoName && <p className="text-xs text-[#64748B] mt-1">Tanlangan fayl: {photoName}</p>}
           </div>
           <Button type="submit" variant="primary" className="w-full">
             Ma'lumotni yuborish

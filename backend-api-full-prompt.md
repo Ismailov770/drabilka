@@ -1,12 +1,14 @@
 # DrabilkaUz Backend API – Full Prompt & Specification
 
-> Этот файл – единый промпт/документация для Java‑backend DrabilkaUz.
-> Он описывает **фактический и целевой контракт API**: эндпоинты, модели, бизнес‑логику.
-> Используется как источник правды для доработки backend’а и тестирования.
+Этот файл – единый промпт/документация для Java‑backend DrabilkaUz **и для фронтенд‑ИИ**, который обращается к этому backend’у.
+Он описывает **фактический и целевой контракт API**: эндпоинты, модели, бизнес‑логику.
+Используется как источник правды для доработки backend’а, тестирования и генерации корректных HTTP‑запросов со стороны фронтенд‑ИИ.
 
----
-
-## 1. Общая информация
+Краткие правила для фронтенд‑ИИ:
+- всегда использовать базовый URL `http://localhost:8080/api` (или соответствующий `.../api` в продакшене);
+- для всех защищённых эндпоинтов (кроме `/auth/login` и Swagger/health) добавлять заголовок `Authorization: Bearer <jwt>`;
+- уважать ограничения по ролям (`owner`, `cashier`, `driver`, `technical`), указанные в описаниях;
+- фильтры (`dateFrom`, `dateTo`, `status`, `driverId` и т.д.) передавать как query‑параметры; тела запросов – в формате JSON или `multipart/form-data`, как указано в разделах ниже.
 
 - **База URL API**: `http://localhost:8080/api`
 - **Фреймворк**: Spring Boot (REST), Spring Security с JWT.
@@ -523,14 +525,21 @@ ProductionBatch {
 
 ---
 
-## 9. Inventory flows (TODO)
+## 9. Inventory flows
 
-**Планируемые эндпоинты** (ещё могут не быть реализованы):
+Эндпоинты реализованы в `InventoryController` и соответствуют модели `ProductFlow` из `backend-api-spec.md`.
 
 - `GET /api/inventory/flows` – движения складских остатков
-- `POST /api/inventory/flows` – регистрация движения
+  - **Роль**: OWNER
+  - **Параметры query**:
+    - `dateFrom`, `dateTo` (YYYY-MM-DD)
+    - `direction` – "Kirim" | "Chiqim"
+    - `product` – код/название продукта
+  - **Ответ**: `ProductFlow[]` (может быть обёрнут в `{ "items": [...] }` при использовании пагинации).
 
-Модель `ProductFlow` по `backend-api-spec.md`.
+- `POST /api/inventory/flows` – регистрация движения
+  - **Роль**: OWNER
+  - **Тело**: данные `ProductFlowCreateRequest` (product, direction, quantity, from, to, transport, loggedAt и т.д. – см. `backend-api-spec.md`).
 
 ---
 
@@ -597,42 +606,69 @@ Repair {
 - **URL**: `POST /api/equipment/repairs`
 - **Тело**: создание ремонта, включая `beforePhotos` / `afterPhotos` как массив URL (полученных через `/uploads/images` с категорией `REPAIRS`).
 
-### 10.3. Equipment movements (TODO)
+### 10.3. Equipment movements
 
-По спецификации должно быть:
+Эндпоинты реализованы в `EquipmentController` и соответствуют `EquipmentMovement` из `backend-api-spec.md` (категория, тип движения, причина, стоимость, `photoUrl`).
 
 - `GET /api/equipment/movements`
+  - **Роль**: OWNER
+  - **Параметры query**:
+    - `equipmentId` – фильтр по конкретному оборудованию
+    - `category` – тип категории движения
+    - `movement` – "Kirim" | "Chiqim"
+    - `dateFrom`, `dateTo` (YYYY-MM-DD)
+  - **Ответ**: `EquipmentMovement[]` (может быть обёрнут в `{ "items": [...] }`).
+
 - `POST /api/equipment/movements`
-
-Модель `EquipmentMovement` согласно `backend-api-spec.md` (категория, движение, причина, cost, `photoUrl`).
-
----
-
-## 11. Technical expenses (TODO)
-
-Планируемые эндпоинты:
-
-- `GET /api/technical/expenses`
-- `POST /api/technical/expenses`
-
-Модель `TechnicalExpense` – расходы по технике.
+  - **Роль**: OWNER
+  - **Тело**: JSON `EquipmentMovementCreateRequest` (equipment, category, movement, reason, cost, photoUrl, loggedAt).
 
 ---
 
-## 12. Technical repairs (TODO)
+## 11. Technical expenses
 
-Планируемые эндпоинты:
+В текущем Java‑backend нет отдельного префикса `/api/technical/*` для технических расходов.
+Технические расходы реализуются через общий модуль расходов (`ExpensesController`) и хранятся как обычные `Expense` с дополнительными полями фильтров.
 
-- `GET /api/technical/repairs`
-- `POST /api/technical/repairs`
+- `GET /api/expenses` – общий список расходов, в т.ч. технических
+  - **Роли**: OWNER, CASHIER, TECHNICAL
+  - **Параметры query**:
+    - `dateFrom`, `dateTo` (YYYY-MM-DD)
+    - `category`
+    - `department`
+    - `sourceRole` – роль–источник расхода (в т.ч. `TECHNICAL` для технических расходов)
 
-Модель `Repair` – аналогично разделу 10.2, но под префиксом `/technical`.
+- `POST /api/expenses` – создание расхода (в т.ч. технического)
+  - **Роли**: OWNER, CASHIER, TECHNICAL
+  - **Тело**: `ExpenseCreateRequest` (title, category, department, amount, date, status, sourceRole и пр.).
+
+Модель `TechnicalExpense` из спецификации логически мапится на `Expense`, отфильтрованный по `department` и/или `sourceRole = TECHNICAL`.
 
 ---
 
-## 13. Машины и ANPR (TODO)
+## 12. Technical repairs
 
-По спецификации:
+Отдельного префикса `/api/technical/repairs` в текущем backend’е нет.
+Ремонты техники реализованы единым модулем `EquipmentController`:
+
+- `GET /api/equipment/repairs`
+  - **Роли**: OWNER, TECHNICAL
+  - **Параметры query**:
+    - `equipmentId` (optional)
+    - `status` (optional)
+  - **Ответ**: `Repair[]`.
+
+- `POST /api/equipment/repairs`
+  - **Роли**: OWNER, TECHNICAL
+  - **Тело**: `RepairCreateRequest` (equipment, issue, date, cost, tech, status, photos и т.д.).
+
+Таким образом, модель `Repair` из спецификации полностью покрывается существующими эндпоинтами `/api/equipment/repairs`.
+
+---
+
+## 13. Машины и ANPR
+
+Эндпоинты реализованы в `VehicleLogController`.
 
 - `GET /api/vehicles/logs` – список `VehicleLogEntry` с фильтрами `dateFrom`, `dateTo`, `vehicleType`, `direction`.
 

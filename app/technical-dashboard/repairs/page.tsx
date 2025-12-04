@@ -3,10 +3,12 @@
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/button"
 import { Modal } from "@/components/modal"
+import { FileDropzone } from "@/components/file-dropzone"
 import { useState } from "react"
 
 export default function RepairsPage() {
   const [showAddRepair, setShowAddRepair] = useState(false)
+  const [photosText, setPhotosText] = useState("")
   const [repairs] = useState([
     {
       id: "R001",
@@ -104,12 +106,22 @@ export default function RepairsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#0F172A] mb-2">Before/After Photos</label>
-            <input
-              type="file"
+            <FileDropzone
+              label="Before/After Photos"
               accept="image/*"
               multiple
-              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
+              valueText={photosText}
+              onFilesSelected={(files) => {
+                if (!files || files.length === 0) {
+                  setPhotosText("")
+                  return
+                }
+                if (files.length === 1) {
+                  setPhotosText(files[0].name)
+                  return
+                }
+                setPhotosText(`${files.length} files selected`)
+              }}
             />
           </div>
           <Button type="submit" variant="primary" className="w-full">
