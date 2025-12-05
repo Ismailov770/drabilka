@@ -24,9 +24,13 @@ export function DataTable({ columns, data, searchableFields = [], actions, rende
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
 
-  let filteredData = data.filter((row) =>
-    searchableFields.some((field) => String(row[field]).toLowerCase().includes(searchTerm.toLowerCase())),
-  )
+  let filteredData = data
+
+  if (searchableFields.length > 0) {
+    filteredData = data.filter((row) =>
+      searchableFields.some((field) => String(row[field]).toLowerCase().includes(searchTerm.toLowerCase())),
+    )
+  }
 
   if (sortConfig) {
     filteredData = [...filteredData].sort((a, b) => {

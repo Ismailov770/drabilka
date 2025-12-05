@@ -1,23 +1,85 @@
 "use client"
 
 import { DataTable } from "@/components/data-table"
-import { Button } from "@/components/button"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { ApiError, get } from "@/styles/lib/api"
+
+type PayrollRecord = {
+  id: number
+  payrollCode: string
+  employeeName: string
+  department: string
+  role: string
+  month: string
+  baseSalary: number
+  overtime: number
+  deductions: number
+  total: number
+  advance: number
+  remaining: number
+  status: string
+  payoutDate: string
+}
+
+type PayrollRow = {
+  id: string
+  name: string
+  role: string
+  salary: number
+  avans: number
+  balance: number
+  status: string
+}
 
 export default function PayrollPage() {
-  const [employees] = useState([
-    { id: "E001", name: "Ahmed Karim", role: "Haydovchi", salary: 2500, avans: 1000, balance: 1500, status: "To'langan" },
-    {
-      id: "E002",
-      name: "Karim Suleiman",
-      role: "Operator",
-      salary: 2000,
-      avans: 500,
-      balance: 1500,
-      status: "Kutilmoqda",
-    },
-    { id: "E003", name: "Omar Rashid", role: "Texnik", salary: 2200, avans: 200, balance: 2000, status: "To'langan" },
-  ])
+  const [employees, setEmployees] = useState<PayrollRow[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchPayroll = async () => {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const response = await get<PayrollRecord[] | { items?: PayrollRecord[] }>("/payroll")
+        if (cancelled) return
+        const items = Array.isArray(response) ? response : response.items ?? []
+        const mapped: PayrollRow[] = items.map((p) => ({
+          id: String(p.id),
+          name: p.employeeName,
+          role: p.role || p.department,
+          salary: p.baseSalary,
+          avans: p.advance,
+          balance: p.remaining,
+          status: p.status,
+        }))
+        setEmployees(mapped)
+      } catch (err: any) {
+        if (cancelled) return
+        if (err instanceof ApiError) {
+          const backendMessage =
+            (err.data && (err.data as any).message) ||
+            err.message ||
+            "Ish haqi ma'lumotlarini yuklashda xatolik yuz berdi"
+          setError(backendMessage)
+        } else {
+          setError("Ish haqi ma'lumotlarini yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    fetchPayroll()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const columns = [
     { key: "name", label: "Xodim", sortable: true },
@@ -38,23 +100,8 @@ export default function PayrollPage() {
       {/* Employees Table */}
       <div className="bg-white rounded-lg p-6 card-shadow">
         <h2 className="text-lg font-semibold text-[#0F172A] mb-4">Xodimlar ro'yxati</h2>
+        {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
         <DataTable columns={columns} data={employees} searchableFields={["name", "role"]} />
-      </div>
-
-      {/* Actions */}
-      <div className="bg-white rounded-lg p-6 card-shadow">
-        <h2 className="text-lg font-semibold text-[#0F172A] mb-4">Oylik bo'yicha amallar</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Button variant="primary" size="lg" className="w-full">
-            💸 Barcha oyliklarni to'lash
-          </Button>
-          <Button variant="secondary" size="lg" className="w-full">
-            📋 Alohida xodimga to'lash
-          </Button>
-          <Button variant="outline" size="lg" className="w-full bg-transparent">
-            📊 Ish haqi hisobotini chiqarish
-          </Button>
-        </div>
       </div>
     </div>
   )

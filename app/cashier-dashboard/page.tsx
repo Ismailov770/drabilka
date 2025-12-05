@@ -1,10 +1,11 @@
 "use client"
 
 import { Button } from "@/components/button"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Modal } from "@/components/modal"
 import { DataTable } from "@/components/data-table"
 import { printSaleReceipt } from "@/components/print-receipt"
+import { ApiError, get, post } from "@/styles/lib/api"
 
 const UZBEK_CONTENT = {
   dashboard: "Kasser Paneli",
@@ -54,6 +55,43 @@ const UZBEK_CONTENT = {
   save: "Saqlash",
 }
 
+type CashierEmployeeSummary = {
+  name: string
+  salary: number
+  paidAdvance: number
+  totalExpense: number
+  date: string
+}
+
+type CashierExpenseSummary = {
+  type: string
+  employee: string
+  amount: number
+  date: string
+  description: string
+}
+
+type CashierEmployeeDto = {
+  employeeName: string
+  baseSalary: number
+  advance: number
+  total: number
+}
+
+type CashierExpenseDto = {
+  date: string
+  type: string
+  employeeName: string | null
+  description: string
+  amount: number
+}
+
+type CashierDashboardResponse = {
+  employees: CashierEmployeeDto[]
+  advances?: any[]
+  expenses: CashierExpenseDto[]
+}
+
 export default function CashierDashboard() {
   const [showSaleModal, setShowSaleModal] = useState(false)
   const [showExpenseModal, setShowExpenseModal] = useState(false)
@@ -61,64 +99,10 @@ export default function CashierDashboard() {
   const [selectedExpenseFilter, setSelectedExpenseFilter] = useState("all")
   const [newExpenseType, setNewExpenseType] = useState(UZBEK_CONTENT.employeeSalary)
   const [newExpenseEmployee, setNewExpenseEmployee] = useState("")
-
-  const employees = [
-    {
-      name: "Ahmet K.",
-      salary: 3000,
-      paidAdvance: 500,
-      totalExpense: 3500,
-      date: "2024-11-24",
-    },
-    {
-      name: "Karim S.",
-      salary: 2800,
-      paidAdvance: 300,
-      totalExpense: 3100,
-      date: "2024-11-24",
-    },
-    {
-      name: "Omar R.",
-      salary: 3200,
-      paidAdvance: 600,
-      totalExpense: 3800,
-      date: "2024-11-24",
-    },
-    {
-      name: "Dilshod T.",
-      salary: 2600,
-      paidAdvance: 200,
-      totalExpense: 2800,
-      date: "2024-11-24",
-    },
-  ]
-
-  const allExpenses = [
-    { type: "Oyliq", employee: "Ahmet K.", amount: 3000, date: "2024-11-24", description: "Noyabr oyligi" },
-    {
-      type: "Ehtyot",
-      employee: "Karim S.",
-      amount: 300,
-      date: "2024-11-23",
-      description: "Avanslangan ehtyot",
-    },
-    {
-      type: "Solyarka",
-      employee: "Truck-001",
-      amount: 1200,
-      date: "2024-11-23",
-      description: "Solyarka to'ldirish",
-    },
-    { type: "Yo'l", employee: "Omar R.", amount: 450, date: "2024-11-22", description: "Transport xarajatlari" },
-    { type: "Boshqa", employee: "System", amount: 800, date: "2024-11-22", description: "Ish stoli ta'mirlash" },
-    { type: "Oyliq", employee: "Dilshod T.", amount: 2600, date: "2024-11-21", description: "Oktabr oyligi" },
-  ]
-
-  // Sales state for dashboard — includes paymentType (cash/credit)
-  const [sales, setSales] = useState([
-    { id: "S001", client: "ABC Company", material: "Oddiy sement", weight: 50, price: 8500, date: "2024-01-15", employee: "Fatima", paymentType: "Naqd" },
-    { id: "S002", client: "XYZ Corp", material: "Tez qotuvchi sement", weight: 30, price: 5400, date: "2024-01-15", employee: "Ahmed", paymentType: "Qarzga" },
-  ])
+  const [employees, setEmployees] = useState<CashierEmployeeSummary[]>([])
+  const [allExpenses, setAllExpenses] = useState<CashierExpenseSummary[]>([])
+  const [dashboardError, setDashboardError] = useState<string | null>(null)
+  const [isDashboardLoading, setIsDashboardLoading] = useState(false)
 
   // New sale form state
   const [newClient, setNewClient] = useState("")
@@ -126,6 +110,64 @@ export default function CashierDashboard() {
   const [newWeight, setNewWeight] = useState<number | "">("")
   const [newPrice, setNewPrice] = useState<number | "">("")
   const [newPaymentType, setNewPaymentType] = useState("Naqd")
+
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchDashboard = async () => {
+      setIsDashboardLoading(true)
+      setDashboardError(null)
+      try {
+        const response = await get<CashierDashboardResponse | { items?: CashierDashboardResponse }>("/cashier-dashboard")
+        if (cancelled) return
+
+        const payload: CashierDashboardResponse = Array.isArray((response as any).employees)
+          ? (response as CashierDashboardResponse)
+          : ((response as any).items as CashierDashboardResponse)
+
+        const employeesData: CashierEmployeeSummary[] = (payload?.employees ?? []).map((e) => ({
+          name: e.employeeName,
+          salary: e.baseSalary,
+          paidAdvance: e.advance,
+          totalExpense: e.total,
+          date: "",
+        }))
+
+        const expensesData: CashierExpenseSummary[] = (payload?.expenses ?? []).map((exp) => ({
+          type: exp.type,
+          employee: exp.employeeName ?? "",
+          amount: exp.amount,
+          date: exp.date,
+          description: exp.description,
+        }))
+
+        setEmployees(employeesData)
+        setAllExpenses(expensesData)
+      } catch (err: any) {
+        if (cancelled) return
+        if (err instanceof ApiError) {
+          const backendMessage =
+            (err.data && (err.data as any).message) || err.message ||
+            "Kassir paneli ma'lumotlarini yuklashda xatolik yuz berdi"
+          setDashboardError(backendMessage)
+        } else {
+          setDashboardError(
+            "Kassir paneli ma'lumotlarini yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setIsDashboardLoading(false)
+        }
+      }
+    }
+
+    fetchDashboard()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <div className="space-y-8">
@@ -152,8 +194,8 @@ export default function CashierDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {employees.map((emp) => (
-                  <tr key={emp.name} className="border-b border-slate-100 hover:bg-slate-50">
+                {employees.map((emp, index) => (
+                  <tr key={index} className="border-b border-slate-100 hover:bg-slate-50">
                     <td className="px-3 py-3 text-slate-900 font-medium">{emp.name}</td>
                     <td className="px-3 py-3 text-slate-700">{emp.salary} $</td>
                     <td className="px-3 py-3 text-slate-700">{emp.paidAdvance} $</td>
@@ -169,9 +211,9 @@ export default function CashierDashboard() {
         <div className="bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">{UZBEK_CONTENT.advances}</h2>
           <div className="space-y-3">
-            {employees.map((emp) => (
+            {employees.map((emp, index) => (
               <div
-                key={emp.name}
+                key={index}
                 className="flex justify-between items-center p-3 border border-slate-100 rounded-lg hover:bg-slate-50"
               >
                 <div>
@@ -204,6 +246,11 @@ export default function CashierDashboard() {
             </select>
           </div>
         </div>
+
+        {dashboardError && <p className="mb-4 text-sm text-red-600">{dashboardError}</p>}
+        {isDashboardLoading && !dashboardError && (
+          <p className="mb-4 text-sm text-slate-500">Yuklanmoqda...</p>
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -261,20 +308,32 @@ export default function CashierDashboard() {
       <Modal isOpen={showSaleModal} title={UZBEK_CONTENT.addSale} onClose={() => setShowSaleModal(false)} size="md">
         <form
           className="space-y-4"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault()
-            const id = `S${(sales.length + 1).toString().padStart(3, "0")}`
-            const sale = {
-              id,
-              client: newClient || "Tasodifiy mijoz",
-              material: newMaterial,
-              weight: Number(newWeight) || 0,
-              price: Number(newPrice) || 0,
-              date: new Date().toISOString().slice(0, 10),
-              employee: "cashier",
-              paymentType: newPaymentType,
+
+            try {
+              const payload = {
+                client: newClient || "Naqd mijoz",
+                phone: "",
+                material: newMaterial,
+                weight: Number(newWeight) || 0,
+                price: Number(newPrice) || 0,
+                date: new Date().toISOString().slice(0, 10),
+                employee: "Kassir",
+                carNumber: newClient || "",
+                paymentType: newPaymentType,
+                note: "",
+              }
+
+              await post("/sales", payload)
+            } catch (err: any) {
+              if (err instanceof ApiError) {
+                console.error("Savdoni saqlashda xatolik:", err.data || err.message)
+              } else {
+                console.error("Savdoni saqlashda xatolik:", err)
+              }
             }
-            setSales((prev) => [sale, ...prev])
+
             // Reset form
             setNewClient("")
             setNewMaterial("Oddiy sement")

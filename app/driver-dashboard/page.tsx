@@ -3,7 +3,7 @@
 import { Button } from "@/components/button"
 import { FileDropzone } from "@/components/file-dropzone"
 import { ApiError, post } from "@/styles/lib/api"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 export default function DriverDashboard() {
   const [fuelAmount, setFuelAmount] = useState("")
@@ -12,8 +12,38 @@ export default function DriverDashboard() {
   const [speedometerPhotoName, setSpeedometerPhotoName] = useState("")
   const [fuelGaugeFile, setFuelGaugeFile] = useState<File | null>(null)
   const [speedometerFile, setSpeedometerFile] = useState<File | null>(null)
+  const [fuelGaugePreviewUrl, setFuelGaugePreviewUrl] = useState<string | null>(null)
+  const [speedometerPreviewUrl, setSpeedometerPreviewUrl] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!fuelGaugeFile) {
+      setFuelGaugePreviewUrl(null)
+      return
+    }
+
+    const url = URL.createObjectURL(fuelGaugeFile)
+    setFuelGaugePreviewUrl(url)
+
+    return () => {
+      URL.revokeObjectURL(url)
+    }
+  }, [fuelGaugeFile])
+
+  useEffect(() => {
+    if (!speedometerFile) {
+      setSpeedometerPreviewUrl(null)
+      return
+    }
+
+    const url = URL.createObjectURL(speedometerFile)
+    setSpeedometerPreviewUrl(url)
+
+    return () => {
+      URL.revokeObjectURL(url)
+    }
+  }, [speedometerFile])
 
   return (
     <div className="space-y-8">
@@ -39,39 +69,6 @@ export default function DriverDashboard() {
             try {
               setIsSubmitting(true)
 
-              let driverId: string | null = null
-              if (typeof window !== "undefined") {
-                try {
-                  const raw = window.localStorage.getItem("authUser")
-                  if (raw) {
-                    const user = JSON.parse(raw) as { id?: string | number; driverId?: string | number }
-
-                    const candidateIds: Array<string | number | undefined | null> = [
-                      user.driverId,
-                      user.id,
-                    ]
-
-                    for (const candidate of candidateIds) {
-                      if (candidate === undefined || candidate === null) continue
-                      const n = Number(candidate)
-                      if (!Number.isNaN(n) && Number.isFinite(n)) {
-                        driverId = String(n)
-                        break
-                      }
-                    }
-                  }
-                } catch {
-                }
-              }
-
-              if (!driverId) {
-                setError(
-                  "Haydovchi identifikatori noto'g'ri formatda. Iltimos, tizimdan chiqib qayta kiring yoki administratorga murojaat qiling.",
-                )
-                setIsSubmitting(false)
-                return
-              }
-
               const formData = new FormData()
               formData.append("files", fuelGaugeFile)
               formData.append("files", speedometerFile)
@@ -84,21 +81,13 @@ export default function DriverDashboard() {
               const fuelGaugeUrl = urls[0]
               const speedometerUrl = urls[1]
 
-              await post(
-                "/driver/fuel-records",
-                {
-                  amount: Number(fuelAmount) || 0,
-                  distanceKm: Number(distance) || 0,
-                  dateTime: new Date().toISOString(),
-                  fuelGaugePhotoName: fuelGaugeUrl,
-                  speedometerPhotoName: speedometerUrl,
-                },
-                {
-                  params: {
-                    driverId,
-                  },
-                },
-              )
+              await post("/driver/fuel-records", {
+                amount: Number(fuelAmount) || 0,
+                distanceKm: Number(distance) || 0,
+                dateTime: new Date().toISOString(),
+                fuelGaugePhotoName: fuelGaugeUrl,
+                speedometerPhotoName: speedometerUrl,
+              })
 
               alert("Yangi yoqilg'i hodisasi saqlandi")
 
@@ -154,6 +143,15 @@ export default function DriverDashboard() {
                 setFuelGaugePhotoName(file ? file.name : "")
               }}
             />
+            {fuelGaugePreviewUrl && (
+              <div className="mt-2 flex justify-start">
+                <img
+                  src={fuelGaugePreviewUrl}
+                  alt="Yoqilg'i datchigi surati"
+                  className="w-40 h-40 object-cover rounded-lg border border-[#E2E8F0]"
+                />
+              </div>
+            )}
           </div>
           <div>
             <FileDropzone
@@ -167,6 +165,15 @@ export default function DriverDashboard() {
                 setSpeedometerPhotoName(file ? file.name : "")
               }}
             />
+            {speedometerPreviewUrl && (
+              <div className="mt-2 flex justify-start">
+                <img
+                  src={speedometerPreviewUrl}
+                  alt="Speedometr surati"
+                  className="w-40 h-40 object-cover rounded-lg border border-[#E2E8F0]"
+                />
+              </div>
+            )}
           </div>
           {error && (
             <p className="text-sm text-red-600">

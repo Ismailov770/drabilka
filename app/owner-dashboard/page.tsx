@@ -52,10 +52,15 @@ const quickRanges = [
   { label: "30 kun", days: 30 },
 ]
 
+const today = new Date()
+const currentYear = today.getFullYear()
+const defaultDateFrom = `${currentYear}-01-01`
+const defaultDateTo = today.toISOString().slice(0, 10)
+
 export default function OwnerDashboard() {
   const [filters, setFilters] = useState({
-    dateFrom: timelineData[0].date,
-    dateTo: timelineData[timelineData.length - 1].date,
+    dateFrom: defaultDateFrom,
+    dateTo: defaultDateTo,
   })
   const [latestBatches, setLatestBatches] = useState<ProductionBatch[]>([])
   const [batchesError, setBatchesError] = useState<string | null>(null)
@@ -90,20 +95,20 @@ export default function OwnerDashboard() {
         const [batchesResponse, expensesResponse, vehiclesResponse] = await Promise.all([
           get<ProductionBatch[] | { items?: ProductionBatch[] }>("/production/batches", {
             params: {
-              dateFrom: filters.dateFrom,
-              dateTo: filters.dateTo,
+              dateFrom: filters.dateFrom || undefined,
+              dateTo: filters.dateTo || undefined,
             },
           }),
           get<Expense[] | { items?: Expense[] }>("/expenses", {
             params: {
-              dateFrom: filters.dateFrom,
-              dateTo: filters.dateTo,
+              dateFrom: filters.dateFrom || undefined,
+              dateTo: filters.dateTo || undefined,
             },
           }),
           get<VehicleLogEntry[] | { items?: VehicleLogEntry[] }>("/vehicles/logs", {
             params: {
-              dateFrom: filters.dateFrom,
-              dateTo: filters.dateTo,
+              dateFrom: filters.dateFrom || undefined,
+              dateTo: filters.dateTo || undefined,
             },
           }),
         ])
@@ -207,7 +212,7 @@ export default function OwnerDashboard() {
   )
 
   const applyQuickRange = (days: number) => {
-    const end = new Date(timelineData[timelineData.length - 1].date)
+    const end = new Date()
     const start = new Date(end)
     start.setDate(start.getDate() - (days - 1))
     setFilters((prev) => ({
@@ -256,6 +261,18 @@ export default function OwnerDashboard() {
               {range.label} so'nggi
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() =>
+              setFilters({
+                dateFrom: "",
+                dateTo: "",
+              })
+            }
+            className="px-4 py-2 border border-slate-200 text-sm text-slate-700 rounded-full bg-white hover:bg-slate-50"
+          >
+            Filtrlarni tozalash
+          </button>
         </div>
       </div>
 

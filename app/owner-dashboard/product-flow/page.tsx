@@ -32,8 +32,8 @@ const numberFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 
 
 export default function OwnerProductFlowPage() {
   const [filters, setFilters] = useState({
-    dateFrom: "2024-02-12",
-    dateTo: "2024-02-19",
+    dateFrom: new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10),
+    dateTo: new Date().toISOString().slice(0, 10),
     direction: "all",
     product: "all",
   })
@@ -50,8 +50,8 @@ export default function OwnerProductFlowPage() {
       try {
         const response = await get<ProductFlow[] | { items?: ProductFlow[] }>("/inventory/flows", {
           params: {
-            dateFrom: filters.dateFrom,
-            dateTo: filters.dateTo,
+            dateFrom: filters.dateFrom || undefined,
+            dateTo: filters.dateTo || undefined,
             direction: filters.direction === "all" ? undefined : filters.direction,
             product: filters.product === "all" ? undefined : filters.product,
           },
@@ -164,6 +164,22 @@ export default function OwnerProductFlowPage() {
               <option value="Sul'fatge chidamli">Sul'fatge chidamli</option>
             </select>
           </div>
+        </div>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() =>
+              setFilters({
+                dateFrom: "",
+                dateTo: "",
+                direction: "all",
+                product: "all",
+              })
+            }
+            className="px-4 py-2 border border-[#E2E8F0] rounded-lg text-sm text-[#0F172A] hover:bg-[#F1F5F9]"
+          >
+            Filtrlarni tozalash
+          </button>
         </div>
       </div>
 

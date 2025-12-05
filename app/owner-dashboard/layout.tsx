@@ -69,8 +69,8 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
       children: [
         { label: "Tehnikalar Kirim/Chiqim", href: "/owner-dashboard/equipment-flow", icon: <Wrench className="w-4 h-4" /> },
         {
-          label: "Mashinalar Ro'yxati",
-          href: "/owner-dashboard/vehicles",
+          label: "Haydovchilar yoqilg'i sarfi",
+          href: "/owner-dashboard/driver-fuel",
           icon: <ClipboardList className="w-4 h-4" />,
         },
       ],

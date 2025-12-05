@@ -93,7 +93,7 @@ export default function CashierDebtsPage() {
       const body = {
         amount,
         type: payType,
-        paidAt: new Date().toISOString(),
+        at: new Date().toISOString(),
       }
       const response = await post<Debt | { debt?: Debt }>(`/debts/${selectedDebt.id}/payments`, body)
       const updated = (response as any).debt ?? response
@@ -165,8 +165,8 @@ export default function CashierDebtsPage() {
               className="sm-select text-sm"
             >
               <option value="all">All companies</option>
-              {companies.map((c) => (
-                <option key={c} value={c}>
+              {companies.map((c, index) => (
+                <option key={index} value={c}>
                   {c}
                 </option>
               ))}
@@ -222,6 +222,10 @@ export default function CashierDebtsPage() {
                 <option value="Credit">Credit</option>
               </select>
             </div>
+
+            {modalError && (
+              <p className="text-sm text-red-600">{modalError}</p>
+            )}
 
             <div className="flex gap-2">
               <Button variant="primary" onClick={recordPayment} className="w-full">

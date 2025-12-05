@@ -33,10 +33,15 @@ const columns = [
 
 const numberFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 })
 
+const today = new Date()
+const currentYear = today.getFullYear()
+const defaultDateFrom = `${currentYear}-01-01`
+const defaultDateTo = today.toISOString().slice(0, 10)
+
 export default function OwnerProductionPage() {
   const [filters, setFilters] = useState({
-    dateFrom: "2024-02-12",
-    dateTo: "2024-02-19",
+    dateFrom: defaultDateFrom,
+    dateTo: defaultDateTo,
     product: "all",
     shift: "all",
   })
@@ -53,8 +58,8 @@ export default function OwnerProductionPage() {
       try {
         const response = await get<ProductionRecord[] | { items?: ProductionRecord[] }>("/production/batches", {
           params: {
-            dateFrom: filters.dateFrom,
-            dateTo: filters.dateTo,
+            dateFrom: filters.dateFrom || undefined,
+            dateTo: filters.dateTo || undefined,
             product: filters.product === "all" ? undefined : filters.product,
             shift: filters.shift === "all" ? undefined : filters.shift,
           },
@@ -174,6 +179,22 @@ export default function OwnerProductionPage() {
               <option value="Kechgi">Kechgi</option>
             </select>
           </div>
+        </div>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() =>
+              setFilters({
+                dateFrom: "",
+                dateTo: "",
+                product: "all",
+                shift: "all",
+              })
+            }
+            className="px-4 py-2 border border-[#E2E8F0] rounded-lg text-sm text-[#0F172A] hover:bg-[#F1F5F9] mt-2"
+          >
+            Filtrlarni tozalash
+          </button>
         </div>
       </div>
 

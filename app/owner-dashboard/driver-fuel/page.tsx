@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { DataTable } from "@/components/data-table"
+import { Modal } from "@/components/modal"
 import { ApiError, get } from "@/styles/lib/api"
 
 interface DriverFuelRecord {
@@ -15,6 +16,23 @@ interface DriverFuelRecord {
   amount: number
   fuelGaugePhoto?: string
   speedometerPhoto?: string
+}
+
+interface FuelEventDto {
+  id: number
+  driverId: number
+  vehicleId?: number
+  amount: number
+  distanceKm: number
+  fuelGaugePhotoUrl?: string
+  speedometerPhotoUrl?: string
+  dateTime?: string
+  createdAt?: string
+}
+
+interface SelectOption {
+  id: number
+  label: string
 }
 
 const columns = [
@@ -30,16 +48,70 @@ const columns = [
 
 const numberFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 })
 
+const today = new Date()
+const currentYear = today.getFullYear()
+const defaultDateFrom = `${currentYear}-01-01`
+const defaultDateTo = today.toISOString().slice(0, 10)
+
 export default function OwnerDriverFuelPage() {
   const [filters, setFilters] = useState({
-    dateFrom: "2024-02-17",
-    dateTo: "2024-02-19",
+    dateFrom: defaultDateFrom,
+    dateTo: defaultDateTo,
     driver: "all",
     vehicle: "all",
   })
   const [records, setRecords] = useState<DriverFuelRecord[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null)
+  const [driverOptions, setDriverOptions] = useState<SelectOption[]>([])
+  const [vehicleOptions, setVehicleOptions] = useState<SelectOption[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchFilters = async () => {
+      try {
+        const response = await get<any>("/fuel/filters")
+        if (cancelled) return
+
+        const rawDrivers = (response && (response as any).drivers) || []
+        const rawVehicles = (response && (response as any).vehicles) || []
+
+        const mappedDrivers: SelectOption[] = rawDrivers
+          .map((d: any) => {
+            if (d == null || d.id == null) return null
+            const label =
+              d.name ?? d.fullName ?? d.username ?? (typeof d.id === "number" ? `ID ${d.id}` : String(d.id))
+            return { id: Number(d.id), label }
+          })
+          .filter((d: SelectOption | null): d is SelectOption => d !== null)
+
+        const mappedVehicles: SelectOption[] = rawVehicles
+          .map((v: any) => {
+            if (v == null || v.id == null) return null
+            const label =
+              v.name ?? v.label ?? v.plate ?? (typeof v.id === "number" ? `ID ${v.id}` : String(v.id))
+            return { id: Number(v.id), label }
+          })
+          .filter((v: SelectOption | null): v is SelectOption => v !== null)
+
+        setDriverOptions(mappedDrivers)
+        setVehicleOptions(mappedVehicles)
+      } catch {
+        if (!cancelled) {
+          setDriverOptions([])
+          setVehicleOptions([])
+        }
+      }
+    }
+
+    fetchFilters()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -48,19 +120,54 @@ export default function OwnerDriverFuelPage() {
       setIsLoading(true)
       setError(null)
       try {
-        const response = await get<DriverFuelRecord[] | { items?: DriverFuelRecord[] }>("/driver/fuel-records", {
+        const response = await get<FuelEventDto[] | { items?: FuelEventDto[] }>("/fuel/events", {
           params: {
-            dateFrom: filters.dateFrom,
-            dateTo: filters.dateTo,
-            driver: filters.driver === "all" ? undefined : filters.driver,
-            vehicle: filters.vehicle === "all" ? undefined : filters.vehicle,
+            dateFrom: filters.dateFrom || undefined,
+            dateTo: filters.dateTo || undefined,
+            driverId: filters.driver === "all" ? undefined : Number(filters.driver),
+            vehicleId: filters.vehicle === "all" ? undefined : Number(filters.vehicle),
           },
         })
 
         if (cancelled) return
 
         const items = Array.isArray(response) ? response : response.items ?? []
-        setRecords(items)
+
+        const mapped: DriverFuelRecord[] = (items as FuelEventDto[]).map((item) => {
+          const driverLabel =
+            driverOptions.find((d) => d.id === item.driverId)?.label ??
+            (item.driverId != null ? `ID ${item.driverId}` : "-")
+
+          const vehicleLabel =
+            item.vehicleId != null
+              ? vehicleOptions.find((v) => v.id === item.vehicleId)?.label ?? `ID ${item.vehicleId}`
+              : "-"
+
+          let date = ""
+          let time = ""
+          const dateSource = item.dateTime ?? item.createdAt
+          if (dateSource) {
+            const d = new Date(dateSource)
+            if (!Number.isNaN(d.getTime())) {
+              date = d.toISOString().slice(0, 10)
+              time = d.toTimeString().slice(0, 5)
+            }
+          }
+
+          return {
+            id: String(item.id),
+            driver: driverLabel,
+            vehicle: vehicleLabel,
+            date,
+            time,
+            distanceKm: item.distanceKm ?? 0,
+            amount: item.amount ?? 0,
+            fuelGaugePhoto: item.fuelGaugePhotoUrl,
+            speedometerPhoto: item.speedometerPhotoUrl,
+          }
+        })
+
+        setRecords(mapped)
       } catch (err: any) {
         if (cancelled) return
         if (err instanceof ApiError) {
@@ -82,7 +189,7 @@ export default function OwnerDriverFuelPage() {
     return () => {
       cancelled = true
     }
-  }, [filters.dateFrom, filters.dateTo, filters.driver, filters.vehicle])
+  }, [filters.dateFrom, filters.dateTo, filters.driver, filters.vehicle, driverOptions, vehicleOptions])
 
   const withinRange = (dateStr: string) => {
     const current = new Date(dateStr).getTime()
@@ -166,6 +273,22 @@ export default function OwnerDriverFuelPage() {
             </select>
           </div>
         </div>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() =>
+              setFilters({
+                dateFrom: "",
+                dateTo: "",
+                driver: "all",
+                vehicle: "all",
+              })
+            }
+            className="px-4 py-2 border border-slate-200 text-sm text-slate-700 rounded-full bg-white hover:bg-slate-50 mt-2"
+          >
+            Filtrlarni tozalash
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100">
@@ -188,17 +311,43 @@ export default function OwnerDriverFuelPage() {
               return `${row.date} ${row.time}`
             }
             if (col.key === "fuelGaugePhoto") {
-              return row.fuelGaugePhoto ? (
-                <span className="text-[#2563EB] underline text-sm">{row.fuelGaugePhoto}</span>
-              ) : (
-                <span className="text-xs text-slate-400">Rasm yo'q</span>
+              if (!row.fuelGaugePhoto) {
+                return <span className="text-xs text-slate-400">Rasm yo'q</span>
+              }
+
+              return (
+                <button
+                  type="button"
+                  onClick={() => setPreviewImage({ url: row.fuelGaugePhoto, title: "Yoqilg'i datchigi surati" })}
+                  className="flex items-center gap-2 text-[#2563EB] hover:underline text-sm"
+                >
+                  <img
+                    src={row.fuelGaugePhoto}
+                    alt="Yoqilg'i datchigi surati"
+                    className="w-12 h-12 rounded-md object-cover border border-slate-200"
+                  />
+                  <span>Ko'rish</span>
+                </button>
               )
             }
             if (col.key === "speedometerPhoto") {
-              return row.speedometerPhoto ? (
-                <span className="text-[#2563EB] underline text-sm">{row.speedometerPhoto}</span>
-              ) : (
-                <span className="text-xs text-slate-400">Rasm yo'q</span>
+              if (!row.speedometerPhoto) {
+                return <span className="text-xs text-slate-400">Rasm yo'q</span>
+              }
+
+              return (
+                <button
+                  type="button"
+                  onClick={() => setPreviewImage({ url: row.speedometerPhoto, title: "Speedometr surati" })}
+                  className="flex items-center gap-2 text-[#2563EB] hover:underline text-sm"
+                >
+                  <img
+                    src={row.speedometerPhoto}
+                    alt="Speedometr surati"
+                    className="w-12 h-12 rounded-md object-cover border border-slate-200"
+                  />
+                  <span>Ko'rish</span>
+                </button>
               )
             }
             return row[col.key]
@@ -213,6 +362,23 @@ export default function OwnerDriverFuelPage() {
           )}
         />
       </div>
+
+      <Modal
+        isOpen={!!previewImage}
+        title={previewImage?.title ?? "Rasm"}
+        onClose={() => setPreviewImage(null)}
+        size="lg"
+      >
+        {previewImage && (
+          <div className="flex justify-center">
+            <img
+              src={previewImage.url}
+              alt={previewImage.title}
+              className="max-h-[80vh] w-auto rounded-xl border border-slate-200"
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

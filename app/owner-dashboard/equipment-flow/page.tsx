@@ -31,10 +31,15 @@ const columns = [
 
 const currencyFormatter = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
 
+const today = new Date()
+const currentYear = today.getFullYear()
+const defaultDateFrom = `${currentYear}-01-01`
+const defaultDateTo = today.toISOString().split("T")[0]
+
 export default function OwnerEquipmentFlowPage() {
   const [filters, setFilters] = useState({
-    dateFrom: "2024-02-15",
-    dateTo: "2024-02-19",
+    dateFrom: defaultDateFrom,
+    dateTo: defaultDateTo,
     category: "all",
     movement: "all",
   })
@@ -114,20 +119,11 @@ export default function OwnerEquipmentFlowPage() {
     [records, filters.category, filters.movement, filters.dateFrom, filters.dateTo],
   )
 
-  const stats = filteredRecords.reduce(
-    (acc, record) => {
-      if (record.movement === "Kirim") acc.inbound += 1
-      if (record.movement === "Chiqim") acc.outbound += 1
-      return acc
-    },
-    { inbound: 0, outbound: 0 },
-  )
-
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-[#0F172A]">Yoqilg'i sarfi</h1>
-        <p className="text-[#64748B] mt-1">Haydovchilar tomonidan kiritilgan yoqilg'i hodisalari va ularning sarfi</p>
+        <h1 className="text-3xl font-bold text-[#0F172A]">Texnika</h1>
+        <p className="text-[#64748B] mt-1">Texnika va uskunalar bo'yicha kirim-chiqim hodisalari jurnali</p>
       </div>
 
       <div className="bg-white rounded-lg p-6 card-shadow space-y-4">
@@ -176,13 +172,27 @@ export default function OwnerEquipmentFlowPage() {
             </select>
           </div>
         </div>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() =>
+              setFilters({
+                dateFrom: "",
+                dateTo: "",
+                category: "all",
+                movement: "all",
+              })
+            }
+            className="px-4 py-2 border border-[#E2E8F0] rounded-lg text-sm text-[#0F172A] hover:bg-[#F1F5F9] mt-2"
+          >
+            Filtrlarni tozalash
+          </button>
+        </div>
       </div>
-
-  
 
       <div className="bg-white rounded-lg p-6 card-shadow">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-[#0F172A]">Yoqilg'i sarfi jurnali</h2>
+          <h2 className="text-lg font-semibold text-[#0F172A]">Texnika yoqilg'i harakati jurnali</h2>
           <button
             onClick={() => setIsAddMovementOpen(true)}
             className="px-4 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-[#1D4ED8] transition-colors font-semibold flex items-center gap-2"
@@ -242,7 +252,6 @@ export default function OwnerEquipmentFlowPage() {
         <form
           onSubmit={async (e) => {
             e.preventDefault()
-            // TODO: add to data source
             setIsSubmitting(true)
             setSubmitError(null)
 
@@ -342,7 +351,7 @@ export default function OwnerEquipmentFlowPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Yoqilg'i summasi (som)</label>
+              <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Yoqilg'i summasi (so'm)</label>
               <input
                 type="number"
                 value={newMovement.cost}
@@ -377,7 +386,11 @@ export default function OwnerEquipmentFlowPage() {
             />
           </div>
           <div className="flex gap-3 pt-4">
-            <button type="submit" className="flex-1 px-4 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-[#1D4ED8] transition-colors font-semibold">
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-[#1D4ED8] transition-colors font-semibold"
+              disabled={isSubmitting}
+            >
               Saqlash
             </button>
             <button

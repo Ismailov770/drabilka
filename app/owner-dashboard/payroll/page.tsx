@@ -52,10 +52,22 @@ const columns = [
 
 const currencyFormatter = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
 
+const getCurrentMonthLabel = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth() + 1
+  return `${year} M${String(month).padStart(2, "0")}`
+}
+
+const today = new Date()
+const currentYear = today.getFullYear()
+const defaultDateFrom = `${currentYear}-01-01`
+const defaultDateTo = today.toISOString().slice(0, 10)
+
 export default function OwnerPayrollPage() {
   const [filters, setFilters] = useState({
-    dateFrom: "2024-02-15",
-    dateTo: "2024-02-19",
+    dateFrom: defaultDateFrom,
+    dateTo: defaultDateTo,
     department: "all",
     status: "all",
   })
@@ -71,15 +83,10 @@ export default function OwnerPayrollPage() {
     notes: "",
   })
   const [newEmployee, setNewEmployee] = useState({
-    employeeId: "",
     employee: "",
-    department: "",
     role: "",
-    month: new Date().toLocaleDateString("uz-UZ", { month: "long", year: "numeric" }),
+    month: getCurrentMonthLabel(),
     baseSalary: "",
-    overtime: "",
-    deductions: "",
-    advance: "",
   })
   const [payError, setPayError] = useState<string | null>(null)
   const [isPaying, setIsPaying] = useState(false)
@@ -98,8 +105,8 @@ export default function OwnerPayrollPage() {
       try {
         const response = await get<PayrollRecord[] | { items?: PayrollRecord[] }>("/payroll", {
           params: {
-            dateFrom: filters.dateFrom,
-            dateTo: filters.dateTo,
+            dateFrom: filters.dateFrom || undefined,
+            dateTo: filters.dateTo || undefined,
             department: filters.department === "all" ? undefined : filters.department,
             status: filters.status === "all" ? undefined : filters.status,
           },
@@ -159,10 +166,9 @@ export default function OwnerPayrollPage() {
           : employeesResponse.items ?? []
         setEmployees(employeeItems)
 
-        // If department not yet set in new employee state, default from first department filter
+        // Если роль ещё не выбрана, подставляем первую доступную из фильтров
         setNewEmployee((prev) => ({
           ...prev,
-          department: prev.department || employeesFiltersResponse.departments?.[0] || "",
           role: prev.role || employeesFiltersResponse.roles?.[0] || "",
         }))
       } catch {
@@ -207,6 +213,15 @@ export default function OwnerPayrollPage() {
   )
 
   const avgSalary = totals.count ? totals.total / totals.count : 0
+
+  const roleOptions = useMemo(
+    () =>
+      Array.from(new Set(employees.map((e) => e.role).filter(Boolean))).map((role) => ({
+        value: role,
+        label: role,
+      })),
+    [employees],
+  )
 
   return (
     <div className="space-y-6">
@@ -257,6 +272,22 @@ export default function OwnerPayrollPage() {
               ]}
             />
           </div>
+        </div>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() =>
+              setFilters({
+                dateFrom: "",
+                dateTo: "",
+                department: "all",
+                status: "all",
+              })
+            }
+            className="px-4 py-2 border border-[#E2E8F0] rounded-lg text-sm text-[#0F172A] hover:bg-[#F1F5F9] mt-2"
+          >
+            Filtrlarni tozalash
+          </button>
         </div>
       </div>
 
@@ -488,15 +519,10 @@ export default function OwnerPayrollPage() {
         onClose={() => {
           setIsAddEmployeeModalOpen(false)
           setNewEmployee({
-            employeeId: "",
             employee: "",
-            department: "",
             role: "",
-            month: new Date().toLocaleDateString("uz-UZ", { month: "long", year: "numeric" }),
+            month: getCurrentMonthLabel(),
             baseSalary: "",
-            overtime: "",
-            deductions: "",
-            advance: "",
           })
           setAddEmployeeError(null)
           setIsAddingEmployee(false)
@@ -510,28 +536,37 @@ export default function OwnerPayrollPage() {
             setAddEmployeeError(null)
 
             try {
-              if (!newEmployee.employeeId) {
-                setAddEmployeeError("Xodim tanlanmagan")
+              const name = newEmployee.employee.trim()
+              if (!name) {
+                setAddEmployeeError("Xodim ismi kiritilmagan")
+                setIsAddingEmployee(false)
                 return
               }
 
-              const selected = employees.find((e) => String(e.id) === newEmployee.employeeId)
+              const monthInput = newEmployee.month.trim()
+              const match = monthInput.match(/^(\d{4})\s*M(\d{1,2})$/)
+              if (!match) {
+                setAddEmployeeError("Oyi noto'g'ri formatda. Masalan: 2025 M12")
+                setIsAddingEmployee(false)
+                return
+              }
 
-              const now = new Date()
-              const year = now.getFullYear()
-              const month = now.getMonth() + 1
-              const monthLabel = `${year} M${String(month).padStart(2, "0")}`
+              const year = Number(match[1])
+              const month = Number(match[2])
+              const monthLabel = monthInput
 
               const payload = {
-                employeeId: Number(newEmployee.employeeId),
+                // ВРЕМЕННАЯ СХЕМА: backend будет обновлён, чтобы обрабатывать новый сотрудник по имени/роли
+                employeeId: 0, // заглушка, реальный ID пусть определяет backend
+                employeeName: name,
+                employeeRole: newEmployee.role || null,
                 year,
                 month,
                 monthLabel,
-                baseSalary:
-                  newEmployee.baseSalary !== "" ? Number(newEmployee.baseSalary) || 0 : selected?.baseSalary || 0,
-                overtime: Number(newEmployee.overtime) || 0,
-                deductions: Number(newEmployee.deductions) || 0,
-                advance: Number(newEmployee.advance) || 0,
+                baseSalary: newEmployee.baseSalary !== "" ? Number(newEmployee.baseSalary) || 0 : 0,
+                overtime: 0,
+                deductions: 0,
+                advance: 0,
               }
 
               await post("/payroll", payload)
@@ -552,15 +587,10 @@ export default function OwnerPayrollPage() {
 
               setIsAddEmployeeModalOpen(false)
               setNewEmployee({
-                employeeId: "",
                 employee: "",
-                department: "",
                 role: "",
-                month: new Date().toLocaleDateString("uz-UZ", { month: "long", year: "numeric" }),
+                month: getCurrentMonthLabel(),
                 baseSalary: "",
-                overtime: "",
-                deductions: "",
-                advance: "",
               })
             } catch (err: any) {
               if (err instanceof ApiError) {
@@ -578,37 +608,32 @@ export default function OwnerPayrollPage() {
         >
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Xodim ismi</label>
-            <SelectField
-              value={newEmployee.employeeId}
-              onChange={(employeeId) => {
-                const selected = employees.find((e) => String(e.id) === employeeId)
+            <input
+              type="text"
+              value={newEmployee.employee}
+              onChange={(e) =>
                 setNewEmployee((prev) => ({
                   ...prev,
-                  employeeId,
-                  employee: selected?.fullName || "",
-                  department: selected?.department || prev.department,
-                  role: selected?.role || prev.role,
-                  baseSalary:
-                    prev.baseSalary || (selected?.baseSalary != null ? String(selected.baseSalary) : prev.baseSalary),
+                  employee: e.target.value,
                 }))
-              }}
-              options={employees.map((e) => ({
-                value: String(e.id),
-                label: `${e.fullName} (${e.employeeCode})`,
-              }))}
+              }
+              className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+              placeholder="Xodim ismini kiriting"
+              required
             />
           </div>
           <div>
-            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Bo'lim</label>
-            <div className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg bg-slate-50 text-sm text-[#0F172A]">
-              {newEmployee.department || "Xodim tanlang"}
-            </div>
-          </div>
-          <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Lavozim</label>
-            <div className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg bg-slate-50 text-sm text-[#0F172A]">
-              {newEmployee.role || "Xodim tanlang"}
-            </div>
+            <SelectField
+              value={newEmployee.role}
+              onChange={(role) =>
+                setNewEmployee((prev) => ({
+                  ...prev,
+                  role,
+                }))
+              }
+              options={roleOptions}
+            />
           </div>
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Oyi</label>
@@ -617,7 +642,7 @@ export default function OwnerPayrollPage() {
               value={newEmployee.month}
               onChange={(e) => setNewEmployee((prev) => ({ ...prev, month: e.target.value }))}
               className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-              placeholder="Masalan: Fevral 2024"
+              placeholder="Masalan: 2025 M12"
               required
             />
           </div>
@@ -634,42 +659,6 @@ export default function OwnerPayrollPage() {
               required
             />
           </div>
-          <div>
-            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Qo'shimcha ish ($)</label>
-            <input
-              type="number"
-              value={newEmployee.overtime}
-              onChange={(e) => setNewEmployee((prev) => ({ ...prev, overtime: e.target.value }))}
-              className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-              placeholder="0"
-              min="0"
-              step="0.01"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Chegirmalar ($)</label>
-            <input
-              type="number"
-              value={newEmployee.deductions}
-              onChange={(e) => setNewEmployee((prev) => ({ ...prev, deductions: e.target.value }))}
-              className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-              placeholder="0"
-              min="0"
-              step="0.01"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Olgan avansi ($)</label>
-            <input
-              type="number"
-              value={newEmployee.advance}
-              onChange={(e) => setNewEmployee((prev) => ({ ...prev, advance: e.target.value }))}
-              className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-              placeholder="0"
-              min="0"
-              step="0.01"
-            />
-          </div>
           <div className="flex gap-3 pt-4">
             <button
               type="submit"
@@ -683,15 +672,10 @@ export default function OwnerPayrollPage() {
               onClick={() => {
                 setIsAddEmployeeModalOpen(false)
                 setNewEmployee({
-                  employeeId: "",
                   employee: "",
-                  department: "",
                   role: "",
-                  month: new Date().toLocaleDateString("uz-UZ", { month: "long", year: "numeric" }),
+                  month: getCurrentMonthLabel(),
                   baseSalary: "",
-                  overtime: "",
-                  deductions: "",
-                  advance: "",
                 })
                 setAddEmployeeError(null)
               }}

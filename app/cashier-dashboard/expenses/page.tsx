@@ -16,6 +16,20 @@ type Expense = {
   status?: string
 }
 
+type Employee = {
+  id: number
+  employeeCode: string
+  fullName: string
+  role: string
+  department: string
+  baseSalary: number
+}
+
+const today = new Date()
+const currentYear = today.getFullYear()
+const defaultDateFrom = `${currentYear}-01-01`
+const defaultDateTo = today.toISOString().split("T")[0]
+
 const columns = [
   { key: "id", label: "Hujjat", sortable: true },
   { key: "title", label: "Tavsif", sortable: false },
@@ -27,12 +41,10 @@ const columns = [
 
 const currencyFormatter = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
 
-const employees = ["Ahmed Karim", "Karim Suleiman", "Omar Rashid", "Dilshod T."]
-
 export default function OwnerExpensesPage() {
   const [filters, setFilters] = useState({
-    dateFrom: "2024-02-15",
-    dateTo: "2024-02-19",
+    dateFrom: defaultDateFrom,
+    dateTo: defaultDateTo,
     category: "all",
     status: "all",
   })
@@ -44,12 +56,18 @@ export default function OwnerExpensesPage() {
     amount: "",
     status: "Tasdiq kutmoqda",
     date: new Date().toISOString().split("T")[0],
+    employeeName: "",
   })
   const [records, setRecords] = useState<Expense[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [employeesLoading, setEmployeesLoading] = useState(false)
+  const [employeesLoaded, setEmployeesLoaded] = useState(false)
+  const [employeesError, setEmployeesError] = useState<string | null>(null)
+  const [employeeError, setEmployeeError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -60,8 +78,8 @@ export default function OwnerExpensesPage() {
       try {
         const response = await get<Expense[] | { items?: Expense[] }>("/expenses", {
           params: {
-            dateFrom: filters.dateFrom,
-            dateTo: filters.dateTo,
+            dateFrom: filters.dateFrom || undefined,
+            dateTo: filters.dateTo || undefined,
             category: filters.category === "all" ? undefined : filters.category,
           },
         })
@@ -92,6 +110,53 @@ export default function OwnerExpensesPage() {
       cancelled = true
     }
   }, [filters.dateFrom, filters.dateTo, filters.category])
+
+  useEffect(() => {
+    if (!isAddExpenseModalOpen) return
+    if (newExpense.category !== "Ish haqi") return
+    if (employeesLoaded || employeesLoading) return
+
+    let cancelled = false
+
+    const fetchEmployees = async () => {
+      setEmployeesLoading(true)
+      setEmployeesError(null)
+      try {
+        const response = await get<Employee[] | { items?: Employee[] }>("/employees", {
+          params: {
+            department: "",
+            role: "",
+            active: true,
+          },
+        })
+
+        if (cancelled) return
+
+        const items = Array.isArray(response) ? response : response.items ?? []
+        setEmployees(items)
+        setEmployeesLoaded(true)
+      } catch (err: any) {
+        if (cancelled) return
+        if (err instanceof ApiError) {
+          const backendMessage =
+            (err.data && (err.data as any).message) || err.message || "Xodimlar ro'yxatini yuklashda xatolik yuz berdi"
+          setEmployeesError(backendMessage)
+        } else {
+          setEmployeesError("Xodimlar ro'yxatini yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+        }
+      } finally {
+        if (!cancelled) {
+          setEmployeesLoading(false)
+        }
+      }
+    }
+
+    fetchEmployees()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isAddExpenseModalOpen, newExpense.category, employeesLoaded, employeesLoading])
 
   const withinRange = (dateStr: string) => {
     const current = new Date(dateStr).getTime()
@@ -166,7 +231,22 @@ export default function OwnerExpensesPage() {
               <option value="Ish haqi">Ish haqi</option>
             </select>
           </div>
-         
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() =>
+                setFilters({
+                  dateFrom: "",
+                  dateTo: "",
+                  category: "all",
+                  status: "all",
+                })
+              }
+              className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg text-sm text-[#0F172A] hover:bg-[#F1F5F9]"
+            >
+              Filtrlarni tozalash
+            </button>
+          </div>
         </div>
       </div>
 
@@ -218,8 +298,10 @@ export default function OwnerExpensesPage() {
             amount: "",
             status: "Tasdiq kutmoqda",
             date: new Date().toISOString().split("T")[0],
+            employeeName: "",
           })
           setSubmitError(null)
+          setEmployeeError(null)
           setIsSubmitting(false)
         }}
         size="lg"
@@ -231,12 +313,20 @@ export default function OwnerExpensesPage() {
             setIsSubmitting(true)
             setSubmitError(null)
 
+            if (newExpense.category === "Ish haqi" && !newExpense.employeeName) {
+              setEmployeeError("Xodim majburiy")
+              setIsSubmitting(false)
+              return
+            }
+
             try {
               const payload = {
                 title: newExpense.title,
                 category: newExpense.category,
                 department: newExpense.department,
+                employeeName: newExpense.category === "Ish haqi" ? newExpense.employeeName : undefined,
                 amount: Number(newExpense.amount) || 0,
+                currency: "USD",
                 date: newExpense.date,
                 status: newExpense.status,
               }
@@ -254,7 +344,9 @@ export default function OwnerExpensesPage() {
                 amount: "",
                 status: "Tasdiq kutmoqda",
                 date: new Date().toISOString().split("T")[0],
+                employeeName: "",
               })
+              setEmployeeError(null)
             } catch (err: any) {
               if (err instanceof ApiError) {
                 const backendMessage =
@@ -289,8 +381,9 @@ export default function OwnerExpensesPage() {
                 setNewExpense((prev) => ({
                   ...prev,
                   category,
-                  department: category === "Ish haqi" ? employees[0] : prev.department,
+                  employeeName: category === "Ish haqi" ? prev.employeeName : "",
                 }))
+                setEmployeeError(null)
               }}
               className="w-full sm-select"
               required
@@ -306,17 +399,31 @@ export default function OwnerExpensesPage() {
             <div>
               <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Xodim</label>
               <select
-                value={newExpense.department}
-                onChange={(e) => setNewExpense((prev) => ({ ...prev, department: e.target.value }))}
+                value={newExpense.employeeName}
+                onChange={(e) => {
+                  const employeeName = e.target.value
+                  setEmployeeError(null)
+                  const selected = employees.find((emp) => emp.fullName === employeeName)
+                  setNewExpense((prev) => ({
+                    ...prev,
+                    employeeName,
+                    department: selected?.department || prev.department,
+                  }))
+                }}
                 className="w-full sm-select"
                 required
               >
+                <option value="" disabled>
+                  Xodim tanlang
+                </option>
                 {employees.map((emp) => (
-                  <option key={emp} value={emp}>
-                    {emp}
+                  <option key={emp.id} value={emp.fullName}>
+                    {emp.fullName}
                   </option>
                 ))}
               </select>
+              {employeeError && <p className="mt-1 text-xs text-red-600">{employeeError}</p>}
+              {employeesError && <p className="mt-1 text-xs text-red-600">{employeesError}</p>}
             </div>
           )}
           <div>
@@ -362,8 +469,10 @@ export default function OwnerExpensesPage() {
                   amount: "",
                   status: "Tasdiq kutmoqda",
                   date: new Date().toISOString().split("T")[0],
+                  employeeName: "",
                 })
                 setSubmitError(null)
+                setEmployeeError(null)
               }}
               className="flex-1 px-4 py-2 bg-gray-200 text-[#0F172A] rounded-lg hover:bg-gray-300 transition-colors font-semibold"
             >
