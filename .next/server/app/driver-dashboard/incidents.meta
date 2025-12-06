@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/driver-dashboard/layout,_N_T_/driver-dashboard/incidents/layout,_N_T_/driver-dashboard/incidents/page,_N_T_/driver-dashboard/incidents"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/driver-dashboard/incidents/__PAGE__",
+    "/driver-dashboard/incidents",
+    "/driver-dashboard",
+    "/_index",
+    "/_head"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/owner-dashboard/layout,_N_T_/owner-dashboard/product-flow/layout,_N_T_/owner-dashboard/product-flow/page,_N_T_/owner-dashboard/product-flow"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/owner-dashboard/product-flow/__PAGE__",
+    "/owner-dashboard/product-flow",
+    "/owner-dashboard",
+    "/_index",
+    "/_head"
+  ]
+}

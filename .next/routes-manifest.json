@@ -1,0 +1,182 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/cashier-dashboard",
+      "regex": "^/cashier\\-dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/cashier\\-dashboard(?:/)?$"
+    },
+    {
+      "page": "/cashier-dashboard/debts",
+      "regex": "^/cashier\\-dashboard/debts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/cashier\\-dashboard/debts(?:/)?$"
+    },
+    {
+      "page": "/cashier-dashboard/expenses",
+      "regex": "^/cashier\\-dashboard/expenses(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/cashier\\-dashboard/expenses(?:/)?$"
+    },
+    {
+      "page": "/cashier-dashboard/payroll",
+      "regex": "^/cashier\\-dashboard/payroll(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/cashier\\-dashboard/payroll(?:/)?$"
+    },
+    {
+      "page": "/cashier-dashboard/sales",
+      "regex": "^/cashier\\-dashboard/sales(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/cashier\\-dashboard/sales(?:/)?$"
+    },
+    {
+      "page": "/driver-dashboard",
+      "regex": "^/driver\\-dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/driver\\-dashboard(?:/)?$"
+    },
+    {
+      "page": "/driver-dashboard/incidents",
+      "regex": "^/driver\\-dashboard/incidents(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/driver\\-dashboard/incidents(?:/)?$"
+    },
+    {
+      "page": "/driver-dashboard/timeline",
+      "regex": "^/driver\\-dashboard/timeline(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/driver\\-dashboard/timeline(?:/)?$"
+    },
+    {
+      "page": "/owner-dashboard",
+      "regex": "^/owner\\-dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/owner\\-dashboard(?:/)?$"
+    },
+    {
+      "page": "/owner-dashboard/debts",
+      "regex": "^/owner\\-dashboard/debts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/owner\\-dashboard/debts(?:/)?$"
+    },
+    {
+      "page": "/owner-dashboard/driver-fuel",
+      "regex": "^/owner\\-dashboard/driver\\-fuel(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/owner\\-dashboard/driver\\-fuel(?:/)?$"
+    },
+    {
+      "page": "/owner-dashboard/equipment-flow",
+      "regex": "^/owner\\-dashboard/equipment\\-flow(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/owner\\-dashboard/equipment\\-flow(?:/)?$"
+    },
+    {
+      "page": "/owner-dashboard/expenses",
+      "regex": "^/owner\\-dashboard/expenses(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/owner\\-dashboard/expenses(?:/)?$"
+    },
+    {
+      "page": "/owner-dashboard/payroll",
+      "regex": "^/owner\\-dashboard/payroll(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/owner\\-dashboard/payroll(?:/)?$"
+    },
+    {
+      "page": "/owner-dashboard/product-flow",
+      "regex": "^/owner\\-dashboard/product\\-flow(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/owner\\-dashboard/product\\-flow(?:/)?$"
+    },
+    {
+      "page": "/owner-dashboard/production",
+      "regex": "^/owner\\-dashboard/production(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/owner\\-dashboard/production(?:/)?$"
+    },
+    {
+      "page": "/technical-dashboard",
+      "regex": "^/technical\\-dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/technical\\-dashboard(?:/)?$"
+    },
+    {
+      "page": "/technical-dashboard/equipment",
+      "regex": "^/technical\\-dashboard/equipment(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/technical\\-dashboard/equipment(?:/)?$"
+    },
+    {
+      "page": "/technical-dashboard/expenses",
+      "regex": "^/technical\\-dashboard/expenses(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/technical\\-dashboard/expenses(?:/)?$"
+    },
+    {
+      "page": "/technical-dashboard/repairs",
+      "regex": "^/technical\\-dashboard/repairs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/technical\\-dashboard/repairs(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

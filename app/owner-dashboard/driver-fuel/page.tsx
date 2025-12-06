@@ -8,6 +8,8 @@ import { ApiError, get } from "@/styles/lib/api"
 
 interface DriverFuelRecord {
   id: string
+  driverId?: number
+  vehicleId?: number
   driver: string
   vehicle: string
   date: string
@@ -33,6 +35,27 @@ interface FuelEventDto {
 interface SelectOption {
   id: number
   label: string
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api"
+
+function toFullFileUrl(url?: string): string | undefined {
+  if (!url) return undefined
+  if (url.startsWith("http://") || url.startsWith("https://")) return url
+
+  let origin = ""
+  try {
+    const parsed = new URL(API_BASE_URL)
+    origin = parsed.origin
+  } catch {
+    origin = API_BASE_URL.replace(/\/$/, "")
+  }
+
+  if (url.startsWith("/")) {
+    return `${origin}${url}`
+  }
+
+  return `${origin}/${url}`
 }
 
 const columns = [
@@ -156,14 +179,16 @@ export default function OwnerDriverFuelPage() {
 
           return {
             id: String(item.id),
+            driverId: item.driverId,
+            vehicleId: item.vehicleId,
             driver: driverLabel,
             vehicle: vehicleLabel,
             date,
             time,
             distanceKm: item.distanceKm ?? 0,
             amount: item.amount ?? 0,
-            fuelGaugePhoto: item.fuelGaugePhotoUrl,
-            speedometerPhoto: item.speedometerPhotoUrl,
+            fuelGaugePhoto: toFullFileUrl(item.fuelGaugePhotoUrl),
+            speedometerPhoto: toFullFileUrl(item.speedometerPhotoUrl),
           }
         })
 
@@ -204,8 +229,10 @@ export default function OwnerDriverFuelPage() {
     () =>
       records
         .filter((record) => {
-          const matchesDriver = filters.driver === "all" || record.driver === filters.driver
-          const matchesVehicle = filters.vehicle === "all" || record.vehicle === filters.vehicle
+          const matchesDriver =
+            filters.driver === "all" || (record.driverId != null && String(record.driverId) === filters.driver)
+          const matchesVehicle =
+            filters.vehicle === "all" || (record.vehicleId != null && String(record.vehicleId) === filters.vehicle)
           return matchesDriver && matchesVehicle && withinRange(record.date)
         })
         .map((record, index) => ({
@@ -252,10 +279,11 @@ export default function OwnerDriverFuelPage() {
               className="w-full sm-select"
             >
               <option value="all">Barchasi</option>
-              <option value="Ahmed Karim">Ahmed Karim</option>
-              <option value="Omar Rashid">Omar Rashid</option>
-              <option value="Karim Suleiman">Karim Suleiman</option>
-              <option value="Otabek Usmonov">Otabek Usmonov</option>
+              {driverOptions.map((driver) => (
+                <option key={driver.id} value={String(driver.id)}>
+                  {driver.label}
+                </option>
+              ))}
             </select>
           </div>
           <div>
@@ -266,10 +294,11 @@ export default function OwnerDriverFuelPage() {
               className="w-full sm-select"
             >
               <option value="all">Barchasi</option>
-              <option value="TRUCK-001 (01A123BC)">TRUCK-001 (01A123BC)</option>
-              <option value="TRUCK-014 (80B456DE)">TRUCK-014 (80B456DE)</option>
-              <option value="TRUCK-021 (25C789FG)">TRUCK-021 (25C789FG)</option>
-              <option value="TRUCK-009 (30D012JK)">TRUCK-009 (30D012JK)</option>
+              {vehicleOptions.map((vehicle) => (
+                <option key={vehicle.id} value={String(vehicle.id)}>
+                  {vehicle.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>

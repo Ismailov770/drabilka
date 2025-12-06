@@ -37,10 +37,55 @@ type PayrollFiltersResponse = {
   statuses?: string[]
 }
 
+function mapPayrollDtoToRecord(item: any): PayrollRecord {
+  const id = item.id ?? item.payrollId ?? ""
+
+  const employeeName =
+    item.employee ??
+    item.employeeName ??
+    item.fullName ??
+    item.name ??
+    (item.employeeCode ? String(item.employeeCode) : "UNKNOWN")
+
+  const department = item.department ?? item.departmentName ?? "-"
+  const role = item.role ?? item.position ?? ""
+
+  const month =
+    item.month ??
+    item.monthLabel ??
+    (item.year != null && item.monthNumber != null
+      ? `${item.year} M${String(item.monthNumber).padStart(2, "0")}`
+      : "")
+
+  const baseSalary = item.baseSalary ?? item.salary ?? 0
+  const overtime = item.overtime ?? 0
+  const deductions = item.deductions ?? 0
+  const total = item.total ?? item.totalSalary ?? baseSalary
+  const advance = item.advance ?? 0
+  const remaining = item.remaining ?? total - advance
+  const status = item.status ?? ""
+  const payoutDate = item.payoutDate ?? item.date ?? item.loggedAt ?? item.createdAt ?? ""
+
+  return {
+    id: String(id),
+    employee: employeeName,
+    department,
+    role,
+    month,
+    baseSalary,
+    overtime,
+    deductions,
+    total,
+    advance,
+    remaining,
+    status,
+    payoutDate,
+  }
+}
+
 const columns = [
   { key: "id", label: "ID", sortable: true },
   { key: "employee", label: "Xodim", sortable: true },
-  { key: "department", label: "Bo'lim", sortable: true },
   { key: "role", label: "Lavozim", sortable: false },
   { key: "month", label: "Oyi", sortable: true },
   { key: "total", label: "Umumiy oyligi ($)", sortable: true },
@@ -68,7 +113,6 @@ export default function OwnerPayrollPage() {
   const [filters, setFilters] = useState({
     dateFrom: defaultDateFrom,
     dateTo: defaultDateTo,
-    department: "all",
     status: "all",
   })
   const [records, setRecords] = useState<PayrollRecord[]>([])
@@ -95,6 +139,7 @@ export default function OwnerPayrollPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [payrollDepartments, setPayrollDepartments] = useState<string[]>([])
   const [payrollStatuses, setPayrollStatuses] = useState<string[]>([])
+  const [employeeRoles, setEmployeeRoles] = useState<string[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -103,17 +148,16 @@ export default function OwnerPayrollPage() {
       setIsLoading(true)
       setError(null)
       try {
-        const response = await get<PayrollRecord[] | { items?: PayrollRecord[] }>("/payroll", {
+        const response = await get<any[] | { items?: any[] }>("/payroll", {
           params: {
             dateFrom: filters.dateFrom || undefined,
             dateTo: filters.dateTo || undefined,
-            department: filters.department === "all" ? undefined : filters.department,
             status: filters.status === "all" ? undefined : filters.status,
           },
         })
         if (cancelled) return
         const items = Array.isArray(response) ? response : response.items ?? []
-        setRecords(items)
+        setRecords(items.map((item) => mapPayrollDtoToRecord(item)))
       } catch (err: any) {
         if (cancelled) return
         if (err instanceof ApiError) {
@@ -135,7 +179,7 @@ export default function OwnerPayrollPage() {
     return () => {
       cancelled = true
     }
-  }, [filters.dateFrom, filters.dateTo, filters.department, filters.status])
+  }, [filters.dateFrom, filters.dateTo, filters.status])
 
   useEffect(() => {
     let cancelled = false
@@ -166,10 +210,12 @@ export default function OwnerPayrollPage() {
           : employeesResponse.items ?? []
         setEmployees(employeeItems)
 
-        // Если роль ещё не выбрана, подставляем первую доступную из фильтров
+        const rolesFromFilters = employeesFiltersResponse.roles ?? []
+        setEmployeeRoles(rolesFromFilters)
+
         setNewEmployee((prev) => ({
           ...prev,
-          role: prev.role || employeesFiltersResponse.roles?.[0] || "",
+          role: prev.role || rolesFromFilters[0] || "",
         }))
       } catch {
       }
@@ -194,33 +240,26 @@ export default function OwnerPayrollPage() {
   const filteredRecords = useMemo(
     () =>
       records.filter((record) => {
-        const matchesDept = filters.department === "all" || record.department === filters.department
         const matchesStatus = filters.status === "all" || record.status === filters.status
-        return matchesDept && matchesStatus && withinRange(record.payoutDate)
+        return matchesStatus && withinRange(record.payoutDate)
       }),
-    [records, filters.department, filters.status, filters.dateFrom, filters.dateTo],
+    [records, filters.status, filters.dateFrom, filters.dateTo],
   )
 
   const totals = filteredRecords.reduce(
     (acc, record) => {
       acc.total += record.total
       acc.count += 1
-      if (!acc.byDepartment[record.department]) acc.byDepartment[record.department] = 0
-      acc.byDepartment[record.department] += record.total
       return acc
     },
-    { total: 0, count: 0, byDepartment: {} as Record<string, number> },
+    { total: 0, count: 0 },
   )
 
   const avgSalary = totals.count ? totals.total / totals.count : 0
 
   const roleOptions = useMemo(
-    () =>
-      Array.from(new Set(employees.map((e) => e.role).filter(Boolean))).map((role) => ({
-        value: role,
-        label: role,
-      })),
-    [employees],
+    () => employeeRoles.map((role) => ({ value: role, label: role })),
+    [employeeRoles],
   )
 
   return (
@@ -231,7 +270,7 @@ export default function OwnerPayrollPage() {
       </div>
 
       <div className="bg-white rounded-lg p-6 card-shadow space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Boshlanish sanasi</label>
             <input
@@ -248,17 +287,6 @@ export default function OwnerPayrollPage() {
               value={filters.dateTo}
               onChange={(e) => setFilters((prev) => ({ ...prev, dateTo: e.target.value }))}
               className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Bo'lim</label>
-            <SelectField
-              value={filters.department}
-              onChange={(department) => setFilters((prev) => ({ ...prev, department }))}
-              options={[
-                { value: "all", label: "Barchasi" },
-                ...payrollDepartments.map((d) => ({ value: d, label: d })),
-              ]}
             />
           </div>
           <div>
@@ -280,7 +308,6 @@ export default function OwnerPayrollPage() {
               setFilters({
                 dateFrom: "",
                 dateTo: "",
-                department: "all",
                 status: "all",
               })
             }
@@ -572,16 +599,15 @@ export default function OwnerPayrollPage() {
               await post("/payroll", payload)
 
               try {
-                const response = await get<PayrollRecord[] | { items?: PayrollRecord[] }>("/payroll", {
+                const response = await get<any[] | { items?: any[] }>("/payroll", {
                   params: {
                     dateFrom: filters.dateFrom,
                     dateTo: filters.dateTo,
-                    department: filters.department === "all" ? undefined : filters.department,
                     status: filters.status === "all" ? undefined : filters.status,
                   },
                 })
                 const items = Array.isArray(response) ? response : response.items ?? []
-                setRecords(items)
+                setRecords(items.map((item) => mapPayrollDtoToRecord(item)))
               } catch {
               }
 

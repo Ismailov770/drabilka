@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/owner-dashboard/layout,_N_T_/owner-dashboard/equipment-flow/layout,_N_T_/owner-dashboard/equipment-flow/page,_N_T_/owner-dashboard/equipment-flow"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/owner-dashboard/equipment-flow/__PAGE__",
+    "/owner-dashboard/equipment-flow",
+    "/owner-dashboard",
+    "/_index",
+    "/_head"
+  ]
+}

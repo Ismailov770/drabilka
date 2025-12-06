@@ -256,14 +256,23 @@ export default function OwnerEquipmentFlowPage() {
             setSubmitError(null)
 
             try {
+              const loggedAtDate = newMovement.loggedAt
+              const loggedAtIso =
+                loggedAtDate && loggedAtDate.length === 10
+                  ? `${loggedAtDate}T00:00:00`
+                  : loggedAtDate || new Date().toISOString().slice(0, 19)
+
               const payload = {
+                // TODO: backend currently requires equipmentId; UI has only free-text equipment name
+                // Using 0 as a placeholder until real equipment selection is implemented
+                equipmentId: 0,
                 equipment: newMovement.equipment,
                 category: newMovement.category,
                 movement: newMovement.movement,
                 reason: newMovement.reason,
                 cost: Number(newMovement.cost) || 0,
                 photoUrl: newMovement.photo || undefined,
-                loggedAt: newMovement.loggedAt,
+                loggedAt: loggedAtIso,
               }
 
               const response = await post<EquipmentMovement | { movement?: EquipmentMovement }>(

@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/technical-dashboard/layout,_N_T_/technical-dashboard/equipment/layout,_N_T_/technical-dashboard/equipment/page,_N_T_/technical-dashboard/equipment"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/technical-dashboard/equipment/__PAGE__",
+    "/technical-dashboard/equipment",
+    "/technical-dashboard",
+    "/_index",
+    "/_head"
+  ]
+}
