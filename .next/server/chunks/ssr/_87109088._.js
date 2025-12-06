@@ -1,3 +1,0 @@
-module.exports=[87924,(a,b,c)=>{"use strict";b.exports=a.r(42602).vendored["react-ssr"].ReactJsxRuntime},2094,a=>{"use strict";var b=a.i(87924),c=a.i(72131),d=a.i(50944);function e({children:a}){let e=(0,d.useRouter)(),[f,g]=(0,c.useState)(!1);return((0,c.useEffect)(()=>{"technical"!==localStorage.getItem("userRole")?e.push("/"):g(!0)},[e]),f)?(0,b.jsx)("main",{className:"min-h-screen p-6 bg-[#F8FAFC] flex items-start justify-center",children:a}):null}a.s(["default",()=>e])}];
-
-//# sourceMappingURL=_87109088._.js.map
