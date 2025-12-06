@@ -22,10 +22,12 @@ interface DriverFuelRecord {
 
 interface FuelEventDto {
   id: number
-  driverId: number
+  driverId?: number
+  driverName?: string
   vehicleId?: number
   amount: number
   distanceKm: number
+  vehiclePlateNumber?: string
   fuelGaugePhotoUrl?: string
   speedometerPhotoUrl?: string
   dateTime?: string
@@ -158,13 +160,17 @@ export default function OwnerDriverFuelPage() {
 
         const mapped: DriverFuelRecord[] = (items as FuelEventDto[]).map((item) => {
           const driverLabel =
-            driverOptions.find((d) => d.id === item.driverId)?.label ??
+            (item.driverName && item.driverName.length > 0
+              ? item.driverName
+              : driverOptions.find((d) => d.id === item.driverId)?.label) ??
             (item.driverId != null ? `ID ${item.driverId}` : "-")
 
           const vehicleLabel =
-            item.vehicleId != null
-              ? vehicleOptions.find((v) => v.id === item.vehicleId)?.label ?? `ID ${item.vehicleId}`
-              : "-"
+            item.vehiclePlateNumber && item.vehiclePlateNumber.length > 0
+              ? item.vehiclePlateNumber
+              : item.vehicleId != null
+                ? vehicleOptions.find((v) => v.id === item.vehicleId)?.label ?? `ID ${item.vehicleId}`
+                : "-"
 
           let date = ""
           let time = ""

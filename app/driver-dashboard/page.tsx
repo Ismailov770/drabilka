@@ -9,6 +9,7 @@ export default function DriverDashboard() {
   const [fuelAmount, setFuelAmount] = useState("")
   const [fuelGaugePhotoName, setFuelGaugePhotoName] = useState("")
   const [distance, setDistance] = useState("")
+  const [vehiclePlateNumber, setVehiclePlateNumber] = useState("")
   const [speedometerPhotoName, setSpeedometerPhotoName] = useState("")
   const [fuelGaugeFile, setFuelGaugeFile] = useState<File | null>(null)
   const [speedometerFile, setSpeedometerFile] = useState<File | null>(null)
@@ -61,8 +62,10 @@ export default function DriverDashboard() {
             e.preventDefault()
             setError(null)
 
-            if (!fuelAmount || !distance || !fuelGaugeFile || !speedometerFile) {
-              alert("Iltimos, summa, yurgan masofa, yoqilg'i datchigi va speedometr suratlarini kiriting")
+            if (!fuelAmount || !distance || !vehiclePlateNumber.trim() || !fuelGaugeFile || !speedometerFile) {
+              alert(
+                "Iltimos, summa, yurgan masofa, transport raqami, yoqilg'i datchigi va speedometr suratlarini kiriting",
+              )
               return
             }
 
@@ -84,7 +87,7 @@ export default function DriverDashboard() {
               await post("/driver/fuel-records", {
                 amount: Number(fuelAmount) || 0,
                 distanceKm: Number(distance) || 0,
-                dateTime: new Date().toISOString(),
+                vehiclePlateNumber: vehiclePlateNumber.trim(),
                 fuelGaugePhotoName: fuelGaugeUrl,
                 speedometerPhotoName: speedometerUrl,
               })
@@ -93,6 +96,7 @@ export default function DriverDashboard() {
 
               setFuelAmount("")
               setDistance("")
+              setVehiclePlateNumber("")
               setFuelGaugePhotoName("")
               setSpeedometerPhotoName("")
               setFuelGaugeFile(null)
@@ -128,6 +132,17 @@ export default function DriverDashboard() {
               onChange={(e) => setDistance(e.target.value)}
               placeholder="0"
               className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#0F172A] mb-2">Transport raqami</label>
+            <input
+              type="text"
+              value={vehiclePlateNumber}
+              onChange={(e) => setVehiclePlateNumber(e.target.value)}
+              placeholder="01A123BC"
+              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg uppercase"
               required
             />
           </div>

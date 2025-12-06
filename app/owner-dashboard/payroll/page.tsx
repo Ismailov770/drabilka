@@ -30,6 +30,8 @@ type Employee = {
   role: string
   department: string
   baseSalary: number
+  username: string
+  createdBy?: string | null
 }
 
 type PayrollFiltersResponse = {
@@ -127,10 +129,13 @@ export default function OwnerPayrollPage() {
     notes: "",
   })
   const [newEmployee, setNewEmployee] = useState({
-    employee: "",
+    fullName: "",
     role: "",
-    month: getCurrentMonthLabel(),
+    department: "",
     baseSalary: "",
+    hiredAt: new Date().toISOString().split("T")[0],
+    username: "",
+    password: "",
   })
   const [payError, setPayError] = useState<string | null>(null)
   const [isPaying, setIsPaying] = useState(false)
@@ -140,6 +145,11 @@ export default function OwnerPayrollPage() {
   const [payrollDepartments, setPayrollDepartments] = useState<string[]>([])
   const [payrollStatuses, setPayrollStatuses] = useState<string[]>([])
   const [employeeRoles, setEmployeeRoles] = useState<string[]>([])
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false)
+  const [selectedEmployeeForPassword, setSelectedEmployeeForPassword] = useState<Employee | null>(null)
+  const [newPassword, setNewPassword] = useState("")
+  const [changePasswordError, setChangePasswordError] = useState<string | null>(null)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -262,6 +272,32 @@ export default function OwnerPayrollPage() {
     [employeeRoles],
   )
 
+  const employeeTableRows = useMemo(
+    () =>
+      employees.map((emp, index) => ({
+        order: index + 1,
+        id: emp.id,
+        employeeCode: emp.employeeCode,
+        fullName: emp.fullName,
+        role: emp.role,
+        department: emp.department,
+        baseSalary: emp.baseSalary,
+        username: emp.username,
+        createdBy: emp.createdBy ?? "-",
+      })),
+    [employees],
+  )
+
+  const employeeColumns = [
+    { key: "order", label: "T/R", sortable: false },
+    { key: "fullName", label: "Xodim", sortable: true },
+    { key: "role", label: "Lavozim", sortable: true },
+    { key: "department", label: "Bo'lim", sortable: true },
+    { key: "baseSalary", label: "Asosiy oylik ($)", sortable: true },
+    { key: "username", label: "Login", sortable: true },
+    { key: "createdBy", label: "Kim yaratgan", sortable: true },
+  ]
+
   return (
     <div className="space-y-6">
       <div>
@@ -317,8 +353,6 @@ export default function OwnerPayrollPage() {
           </button>
         </div>
       </div>
-
-
 
       <div className="bg-white rounded-lg p-6 card-shadow">
         <div className="flex justify-between items-center mb-4">
@@ -378,6 +412,38 @@ export default function OwnerPayrollPage() {
               return acc
             },
             { total: 0, advance: 0, remaining: 0, count: 0 },
+          )}
+        />
+      </div>
+
+      <div className="bg-white rounded-lg p-6 card-shadow">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold text-[#0F172A]">Xodimlar ro'yxati</h2>
+        </div>
+        <DataTable
+          columns={employeeColumns}
+          data={employeeTableRows}
+          searchableFields={["fullName", "role", "department", "username", "createdBy"]}
+          renderCell={(row, col) => {
+            if (col.key === "baseSalary") {
+              return currencyFormatter.format(row.baseSalary)
+            }
+            return row[col.key]
+          }}
+          actions={(row: any) => (
+            <button
+              onClick={() => {
+                const emp = employees.find((e) => e.id === row.id)
+                if (!emp) return
+                setSelectedEmployeeForPassword(emp)
+                setNewPassword("")
+                setChangePasswordError(null)
+                setIsChangePasswordModalOpen(true)
+              }}
+              className="px-3 py-1 bg-[#2563EB] text-white rounded-lg hover:bg-[#1D4ED8] transition-colors text-sm font-semibold"
+            >
+              Parolni o'zgartirish
+            </button>
           )}
         />
       </div>
@@ -546,10 +612,13 @@ export default function OwnerPayrollPage() {
         onClose={() => {
           setIsAddEmployeeModalOpen(false)
           setNewEmployee({
-            employee: "",
+            fullName: "",
             role: "",
-            month: getCurrentMonthLabel(),
+            department: "",
             baseSalary: "",
+            hiredAt: new Date().toISOString().split("T")[0],
+            username: "",
+            password: "",
           })
           setAddEmployeeError(null)
           setIsAddingEmployee(false)
@@ -563,60 +632,65 @@ export default function OwnerPayrollPage() {
             setAddEmployeeError(null)
 
             try {
-              const name = newEmployee.employee.trim()
-              if (!name) {
+              const fullName = newEmployee.fullName.trim()
+              const department = newEmployee.department.trim()
+              const username = newEmployee.username.trim()
+
+              if (!fullName) {
                 setAddEmployeeError("Xodim ismi kiritilmagan")
                 setIsAddingEmployee(false)
                 return
               }
-
-              const monthInput = newEmployee.month.trim()
-              const match = monthInput.match(/^(\d{4})\s*M(\d{1,2})$/)
-              if (!match) {
-                setAddEmployeeError("Oyi noto'g'ri formatda. Masalan: 2025 M12")
+              if (!department) {
+                setAddEmployeeError("Bo'lim kiritilmagan")
+                setIsAddingEmployee(false)
+                return
+              }
+              if (!newEmployee.role) {
+                setAddEmployeeError("Lavozim tanlanmagan")
+                setIsAddingEmployee(false)
+                return
+              }
+              if (!newEmployee.hiredAt) {
+                setAddEmployeeError("Ishga olingan sana kiritilmagan")
+                setIsAddingEmployee(false)
+                return
+              }
+              if (!username) {
+                setAddEmployeeError("Login kiritilmagan")
+                setIsAddingEmployee(false)
+                return
+              }
+              if (!newEmployee.password) {
+                setAddEmployeeError("Parol kiritilmagan")
                 setIsAddingEmployee(false)
                 return
               }
 
-              const year = Number(match[1])
-              const month = Number(match[2])
-              const monthLabel = monthInput
-
               const payload = {
                 // ВРЕМЕННАЯ СХЕМА: backend будет обновлён, чтобы обрабатывать новый сотрудник по имени/роли
-                employeeId: 0, // заглушка, реальный ID пусть определяет backend
-                employeeName: name,
-                employeeRole: newEmployee.role || null,
-                year,
-                month,
-                monthLabel,
+                fullName,
+                role: newEmployee.role,
+                department,
                 baseSalary: newEmployee.baseSalary !== "" ? Number(newEmployee.baseSalary) || 0 : 0,
-                overtime: 0,
-                deductions: 0,
-                advance: 0,
+                hiredAt: newEmployee.hiredAt,
+                username,
+                password: newEmployee.password,
               }
 
-              await post("/payroll", payload)
+              const created = await post<Employee>("/employees", payload)
 
-              try {
-                const response = await get<any[] | { items?: any[] }>("/payroll", {
-                  params: {
-                    dateFrom: filters.dateFrom,
-                    dateTo: filters.dateTo,
-                    status: filters.status === "all" ? undefined : filters.status,
-                  },
-                })
-                const items = Array.isArray(response) ? response : response.items ?? []
-                setRecords(items.map((item) => mapPayrollDtoToRecord(item)))
-              } catch {
-              }
+              setEmployees((prev) => [...prev, created])
 
               setIsAddEmployeeModalOpen(false)
               setNewEmployee({
-                employee: "",
+                fullName: "",
                 role: "",
-                month: getCurrentMonthLabel(),
+                department: "",
                 baseSalary: "",
+                hiredAt: new Date().toISOString().split("T")[0],
+                username: "",
+                password: "",
               })
             } catch (err: any) {
               if (err instanceof ApiError) {
@@ -636,11 +710,11 @@ export default function OwnerPayrollPage() {
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Xodim ismi</label>
             <input
               type="text"
-              value={newEmployee.employee}
+              value={newEmployee.fullName}
               onChange={(e) =>
                 setNewEmployee((prev) => ({
                   ...prev,
-                  employee: e.target.value,
+                  fullName: e.target.value,
                 }))
               }
               className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
@@ -662,13 +736,13 @@ export default function OwnerPayrollPage() {
             />
           </div>
           <div>
-            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Oyi</label>
+            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Bo'lim</label>
             <input
               type="text"
-              value={newEmployee.month}
-              onChange={(e) => setNewEmployee((prev) => ({ ...prev, month: e.target.value }))}
+              value={newEmployee.department}
+              onChange={(e) => setNewEmployee((prev) => ({ ...prev, department: e.target.value }))}
               className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-              placeholder="Masalan: 2025 M12"
+              placeholder="Masalan: Transport"
               required
             />
           </div>
@@ -685,6 +759,38 @@ export default function OwnerPayrollPage() {
               required
             />
           </div>
+          <div>
+            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Ishga olingan sana</label>
+            <input
+              type="date"
+              value={newEmployee.hiredAt}
+              onChange={(e) => setNewEmployee((prev) => ({ ...prev, hiredAt: e.target.value }))}
+              className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+              required
+            />
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Login</label>
+            <input
+              type="text"
+              value={newEmployee.username}
+              onChange={(e) => setNewEmployee((prev) => ({ ...prev, username: e.target.value }))}
+              className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+              placeholder="Masalan: driver_ali"
+              required
+            />
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Parol</label>
+            <input
+              type="password"
+              value={newEmployee.password}
+              onChange={(e) => setNewEmployee((prev) => ({ ...prev, password: e.target.value }))}
+              className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+              placeholder="Boshlang'ich parolni kiriting"
+              required
+            />
+          </div>
           <div className="flex gap-3 pt-4">
             <button
               type="submit"
@@ -698,10 +804,13 @@ export default function OwnerPayrollPage() {
               onClick={() => {
                 setIsAddEmployeeModalOpen(false)
                 setNewEmployee({
-                  employee: "",
+                  fullName: "",
                   role: "",
-                  month: getCurrentMonthLabel(),
+                  department: "",
                   baseSalary: "",
+                  hiredAt: new Date().toISOString().split("T")[0],
+                  username: "",
+                  password: "",
                 })
                 setAddEmployeeError(null)
               }}
@@ -712,6 +821,102 @@ export default function OwnerPayrollPage() {
           </div>
           {addEmployeeError && <p className="text-sm text-red-600">{addEmployeeError}</p>}
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={isChangePasswordModalOpen && !!selectedEmployeeForPassword}
+        title="Parolni o'zgartirish"
+        onClose={() => {
+          setIsChangePasswordModalOpen(false)
+          setSelectedEmployeeForPassword(null)
+          setNewPassword("")
+          setChangePasswordError(null)
+          setIsChangingPassword(false)
+        }}
+        size="md"
+      >
+        {selectedEmployeeForPassword && (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              if (!selectedEmployeeForPassword) return
+
+              if (!newPassword) {
+                setChangePasswordError("Yangi parol kiritilmagan")
+                return
+              }
+
+              setIsChangingPassword(true)
+              setChangePasswordError(null)
+
+              try {
+                await post("/auth/change-password", {
+                  username: selectedEmployeeForPassword.username,
+                  newPassword,
+                })
+
+                alert("Parol yangilandi")
+                setIsChangePasswordModalOpen(false)
+                setSelectedEmployeeForPassword(null)
+                setNewPassword("")
+              } catch (err: any) {
+                if (err instanceof ApiError) {
+                  const backendMessage =
+                    (err.data && (err.data as any).message) || err.message || "Parolni o'zgartirishda xatolik yuz berdi"
+                  setChangePasswordError(backendMessage)
+                } else {
+                  setChangePasswordError("Parolni o'zgartirishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+                }
+              } finally {
+                setIsChangingPassword(false)
+              }
+            }}
+            className="space-y-4"
+          >
+            <div>
+              <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Login</label>
+              <input
+                type="text"
+                value={selectedEmployeeForPassword.username}
+                readOnly
+                className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg bg-slate-100 text-slate-700"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Yangi parol</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                placeholder="Yangi parolni kiriting"
+                required
+              />
+            </div>
+            {changePasswordError && <p className="text-sm text-red-600">{changePasswordError}</p>}
+            <div className="flex gap-3 pt-2">
+              <button
+                type="submit"
+                className="flex-1 px-4 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-[#1D4ED8] transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isChangingPassword}
+              >
+                Saqlash
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsChangePasswordModalOpen(false)
+                  setSelectedEmployeeForPassword(null)
+                  setNewPassword("")
+                  setChangePasswordError(null)
+                }}
+                className="flex-1 px-4 py-2 bg-gray-200 text-[#0F172A] rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+              >
+                Bekor qilish
+              </button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   )
