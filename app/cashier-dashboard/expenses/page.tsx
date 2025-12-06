@@ -27,8 +27,8 @@ type Employee = {
 
 const today = new Date()
 const currentYear = today.getFullYear()
-const defaultDateFrom = `${currentYear}-01-01`
-const defaultDateTo = today.toISOString().split("T")[0]
+const defaultDateFrom = ""
+const defaultDateTo = ""
 
 const columns = [
   { key: "id", label: "Hujjat", sortable: true },

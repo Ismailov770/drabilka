@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react"
 import { DataTable } from "@/components/data-table"
 import { Modal } from "@/components/modal"
 import { FileDropzone } from "@/components/file-dropzone"
-import { ApiError, get, post } from "@/styles/lib/api"
+import { API_BASE_URL, ApiError, get, post } from "@/styles/lib/api"
 
 type EquipmentMovement = {
   id: string
@@ -15,7 +15,80 @@ type EquipmentMovement = {
   reason: string
   cost: number
   photoUrl?: string
+  photoUrls?: string[]
   loggedAt: string
+}
+
+function toFullFileUrl(url?: string): string | undefined {
+  if (!url) return undefined
+  if (url.startsWith("http://") || url.startsWith("https://")) return url
+
+  let origin = ""
+  try {
+    const parsed = new URL(API_BASE_URL)
+    origin = parsed.origin
+  } catch {
+    origin = API_BASE_URL.replace(/\/$/, "")
+  }
+
+  if (!url.includes("/")) {
+    const encoded = encodeURIComponent(url)
+    return `${origin}/files/${encoded}`
+  }
+
+  if (url.startsWith("/")) {
+    return `${origin}${url}`
+  }
+
+  return `${origin}/${url}`
+}
+
+type Equipment = {
+  id: string
+  name: string
+}
+
+type EquipmentMovementCreateRequest = {
+  equipmentId?: number
+  equipmentName: string
+  category: string
+  movement: string
+  reason: string
+  cost: number
+  photoUrl?: string | null
+  photoUrls?: string[] | null
+  loggedAt: string
+}
+
+function normalizeMovement(raw: any): EquipmentMovement {
+  const equipment = (raw && (raw.equipmentName ?? raw.equipment)) || ""
+
+  const rawPhotoArray: string[] | undefined = Array.isArray(raw?.photoUrls)
+    ? (raw.photoUrls as any[]).map((p) => String(p))
+    : undefined
+
+  const fullPhotoArray: string[] | undefined = rawPhotoArray
+    ? rawPhotoArray.map((p) => toFullFileUrl(p) ?? p)
+    : undefined
+
+  const rawSinglePhoto =
+    (raw && (raw.photo as string | undefined)) ?? (raw && (raw.photoUrl as string | undefined)) ?? undefined
+
+  const fullSingle = rawSinglePhoto ? toFullFileUrl(rawSinglePhoto) ?? rawSinglePhoto : undefined
+
+  const fullPhoto = fullSingle ?? (fullPhotoArray && fullPhotoArray.length > 0 ? fullPhotoArray[0] : undefined)
+
+  return {
+    id: String(raw?.id ?? ""),
+    equipment,
+    category: raw?.category ?? "",
+    movement: raw?.movement ?? "",
+    reason: raw?.reason ?? "",
+    cost: Number(raw?.cost) || 0,
+    photoUrl: fullPhoto,
+    photoUrls: fullPhotoArray,
+    loggedAt: raw?.loggedAt ?? "",
+  }
 }
 
 const columns = [
@@ -24,17 +97,17 @@ const columns = [
   { key: "category", label: "Kategoriya", sortable: true },
   { key: "movement", label: "Yo'nalish", sortable: true },
   { key: "reason", label: "Sabab", sortable: false },
-  { key: "cost", label: "Rasxod ($)", sortable: true },
+  { key: "cost", label: "Summa (so'm)", sortable: true },
   { key: "photo", label: "Foto", sortable: false },
   { key: "loggedAt", label: "Sana", sortable: true },
 ]
 
-const currencyFormatter = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
+const sumFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 })
 
 const today = new Date()
 const currentYear = today.getFullYear()
-const defaultDateFrom = `${currentYear}-01-01`
-const defaultDateTo = today.toISOString().split("T")[0]
+const defaultDateFrom = ""
+const defaultDateTo = ""
 
 export default function OwnerEquipmentFlowPage() {
   const [filters, setFilters] = useState({
@@ -58,6 +131,10 @@ export default function OwnerEquipmentFlowPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [photoNames, setPhotoNames] = useState<string[]>([])
+  const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([])
+  const [photoFiles, setPhotoFiles] = useState<File[]>([])
+  const [photoPreview, setPhotoPreview] = useState<{ urls: string[]; index: number; title: string } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -66,11 +143,12 @@ export default function OwnerEquipmentFlowPage() {
       setIsLoading(true)
       setError(null)
       try {
-        const response = await get<EquipmentMovement[] | { items?: EquipmentMovement[] }>("/equipment/movements")
+        const response = await get<any[] | { items?: any[] }>("/equipment/movements")
 
         if (cancelled) return
 
-        const items = Array.isArray(response) ? response : response.items ?? []
+        const rawItems = Array.isArray(response) ? response : response.items ?? []
+        const items = rawItems.map((item) => normalizeMovement(item))
         setRecords(items)
       } catch (err: any) {
         if (cancelled) return
@@ -114,7 +192,7 @@ export default function OwnerEquipmentFlowPage() {
         })
         .map((record) => ({
           ...record,
-          photo: (record as any).photo ?? (record as any).photoUrl ?? undefined,
+          photo: record.photoUrl,
         })),
     [records, filters.category, filters.movement, filters.dateFrom, filters.dateTo],
   )
@@ -208,13 +286,45 @@ export default function OwnerEquipmentFlowPage() {
           searchableFields={["id", "equipment", "category", "movement", "reason"]}
           renderCell={(row, col) => {
             if (col.key === "cost") {
-              return currencyFormatter.format(row.cost || 0)
+              const value = Number(row.cost) || 0
+              return `${sumFormatter.format(value)} so'm`
             }
             if (col.key === "photo") {
-              return row.photo ? (
-                <img src={row.photo} alt={row.equipment} className="w-16 h-16 object-cover rounded-lg border border-[#E2E8F0]" />
-              ) : (
-                <span className="text-sm text-[#94A3B8]">Rasm yo'q</span>
+              const urls: string[] = Array.isArray(row.photoUrls) && row.photoUrls.length > 0
+                ? row.photoUrls
+                : row.photo
+                  ? [row.photo]
+                  : []
+
+              if (!urls.length) {
+                return <span className="text-sm text-[#94A3B8]">Rasm yo'q</span>
+              }
+
+              const countExtra = urls.length - 1
+
+              return (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPhotoPreview({
+                      urls,
+                      index: 0,
+                      title: row.equipment || "Texnika surati",
+                    })
+                  }
+                  className="relative inline-block focus:outline-none"
+                >
+                  <img
+                    src={urls[0]}
+                    alt={row.equipment}
+                    className="w-16 h-16 object-cover rounded-lg border border-[#E2E8F0]"
+                  />
+                  {countExtra > 0 && (
+                    <div className="absolute bottom-0 right-0 px-1.5 py-0.5 rounded bg-black/70 text-[10px] text-white">
+                      +{countExtra}
+                    </div>
+                  )}
+                </button>
               )
             }
             return row[col.key]
@@ -246,6 +356,9 @@ export default function OwnerEquipmentFlowPage() {
           })
           setSubmitError(null)
           setIsSubmitting(false)
+          setPhotoNames([])
+          setPhotoPreviewUrls([])
+          setPhotoFiles([])
         }}
         size="lg"
       >
@@ -262,26 +375,53 @@ export default function OwnerEquipmentFlowPage() {
                   ? `${loggedAtDate}T00:00:00`
                   : loggedAtDate || new Date().toISOString().slice(0, 19)
 
-              const payload = {
-                // TODO: backend currently requires equipmentId; UI has only free-text equipment name
-                // Using 0 as a placeholder until real equipment selection is implemented
-                equipmentId: 0,
-                equipment: newMovement.equipment,
+              let photoUrl: string | null = null
+              let photoUrls: string[] | null = null
+
+              if (photoFiles.length > 0) {
+                const formData = new FormData()
+                photoFiles.forEach((file) => {
+                  formData.append("files", file)
+                })
+
+                const uploadResponse = await post<{ urls: string[] }, FormData>("/uploads/images", formData, {
+                  params: { category: "EQUIPMENT" },
+                })
+
+                const urls = uploadResponse.urls ?? []
+                if (urls.length > 0) {
+                  photoUrls = urls
+                  photoUrl = urls[0]
+                }
+              }
+
+              const payload: EquipmentMovementCreateRequest = {
+                equipmentName: newMovement.equipment,
                 category: newMovement.category,
                 movement: newMovement.movement,
                 reason: newMovement.reason,
                 cost: Number(newMovement.cost) || 0,
-                photoUrl: newMovement.photo || undefined,
+                photoUrl,
+                photoUrls,
                 loggedAt: loggedAtIso,
               }
 
-              const response = await post<EquipmentMovement | { movement?: EquipmentMovement }>(
+              const response = await post<any | { movement?: any }, EquipmentMovementCreateRequest>(
                 "/equipment/movements",
                 payload,
               )
-              const created = (response as any).movement ?? response
+              const createdRaw = (response as any).movement ?? response
+              const created = normalizeMovement(createdRaw)
 
-              setRecords((prev) => [...prev, created as EquipmentMovement])
+              try {
+                const allResponse = await get<any[] | { items?: any[] }>("/equipment/movements")
+                const rawItems = Array.isArray(allResponse) ? allResponse : allResponse.items ?? []
+                const items = rawItems.map((item) => normalizeMovement(item))
+                setRecords(items)
+              } catch {
+                // Если рефетч не удался, хотя бы добавим локально созданную запись
+                setRecords((prev) => [...prev, created])
+              }
 
               setIsAddMovementOpen(false)
               setNewMovement({
@@ -293,6 +433,9 @@ export default function OwnerEquipmentFlowPage() {
                 photo: "",
                 loggedAt: new Date().toISOString().split("T")[0],
               })
+              setPhotoNames([])
+              setPhotoPreviewUrls([])
+              setPhotoFiles([])
             } catch (err: any) {
               if (err instanceof ApiError) {
                 const backendMessage =
@@ -318,7 +461,7 @@ export default function OwnerEquipmentFlowPage() {
               value={newMovement.equipment}
               onChange={(e) => setNewMovement((prev) => ({ ...prev, equipment: e.target.value }))}
               className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-              placeholder="Masalan: Press A"
+              placeholder="Masalan: DAF CF, Ekskavator va hokazo"
               required
             />
           </div>
@@ -360,7 +503,7 @@ export default function OwnerEquipmentFlowPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Yoqilg'i summasi (so'm)</label>
+              <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Summa</label>
               <input
                 type="number"
                 value={newMovement.cost}
@@ -376,12 +519,47 @@ export default function OwnerEquipmentFlowPage() {
               <FileDropzone
                 label="Surat"
                 accept="image/*"
-                valueText={newMovement.photo}
+                multiple
+                valueText={photoNames.length ? `${photoNames.length} ta rasm tanlandi` : ""}
                 onFilesSelected={(files) => {
-                  const file = files?.[0]
-                  setNewMovement((prev) => ({ ...prev, photo: file ? file.name : "" }))
+                  if (!files || files.length === 0) {
+                    setPhotoNames([])
+                    setPhotoPreviewUrls([])
+                    setPhotoFiles([])
+                    return
+                  }
+
+                  const fileArray = Array.from(files)
+                  if (fileArray.length > 10) {
+                    alert("Maksimal 10 ta rasm yuklash mumkin")
+                  }
+
+                  const limited = fileArray.slice(0, 10)
+                  setPhotoNames(limited.map((file) => file.name))
+                  setPhotoPreviewUrls(limited.map((file) => URL.createObjectURL(file)))
+                  setPhotoFiles(limited)
                 }}
               />
+              {photoPreviewUrls.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs text-[#64748B] mb-1">Tanlangan rasmlar preview:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {photoPreviewUrls.slice(0, 4).map((url, index) => (
+                      <img
+                        key={index}
+                        src={url}
+                        alt={newMovement.equipment || "Yuklangan rasm"}
+                        className="w-24 h-24 object-cover rounded-lg border border-[#E2E8F0]"
+                      />
+                    ))}
+                  </div>
+                  {photoPreviewUrls.length > 4 && (
+                    <p className="text-xs text-[#64748B] mt-1">
+                      Yana {photoPreviewUrls.length - 4} ta rasm yuklangan
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div>
@@ -416,6 +594,9 @@ export default function OwnerEquipmentFlowPage() {
                   loggedAt: new Date().toISOString().split("T")[0],
                 })
                 setSubmitError(null)
+                setPhotoNames([])
+                setPhotoPreviewUrls([])
+                setPhotoFiles([])
               }}
               className="flex-1 px-4 py-2 bg-gray-200 text-[#0F172A] rounded-lg hover:bg-gray-300 transition-colors font-semibold"
             >
@@ -424,6 +605,46 @@ export default function OwnerEquipmentFlowPage() {
           </div>
           {submitError && <p className="text-sm text-red-600">{submitError}</p>}
         </form>
+      </Modal>
+      <Modal
+        isOpen={!!photoPreview}
+        title={photoPreview?.title ?? "Rasmlar"}
+        onClose={() => setPhotoPreview(null)}
+        size="lg"
+      >
+        {photoPreview && (
+          <div className="space-y-4">
+            <div className="flex justify-center">
+              <img
+                src={photoPreview.urls[photoPreview.index]}
+                alt={photoPreview.title}
+                className="max-h-[70vh] w-auto rounded-xl border border-[#E2E8F0]"
+              />
+            </div>
+            {photoPreview.urls.length > 1 && (
+              <div className="flex flex-wrap justify-center gap-2">
+                {photoPreview.urls.map((url, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() =>
+                      setPhotoPreview((prev) =>
+                        prev ? { ...prev, index } : null,
+                      )
+                    }
+                    className={`border rounded-md overflow-hidden ${
+                      index === photoPreview.index
+                        ? "border-[#2563EB]"
+                        : "border-[#E2E8F0] opacity-80 hover:opacity-100"
+                    }`}
+                  >
+                    <img src={url} alt="preview" className="w-16 h-16 object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   )

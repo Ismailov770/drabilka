@@ -35,8 +35,8 @@ const numberFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 
 
 const today = new Date()
 const currentYear = today.getFullYear()
-const defaultDateFrom = `${currentYear}-01-01`
-const defaultDateTo = today.toISOString().slice(0, 10)
+const defaultDateFrom = ""
+const defaultDateTo = ""
 
 export default function OwnerProductionPage() {
   const [filters, setFilters] = useState({

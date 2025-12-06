@@ -54,8 +54,8 @@ const quickRanges = [
 
 const today = new Date()
 const currentYear = today.getFullYear()
-const defaultDateFrom = `${currentYear}-01-01`
-const defaultDateTo = today.toISOString().slice(0, 10)
+const defaultDateFrom = ""
+const defaultDateTo = ""
 
 export default function OwnerDashboard() {
   const [filters, setFilters] = useState({
