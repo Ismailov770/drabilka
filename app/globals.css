@@ -64,6 +64,16 @@
   background-color: var(--muted);
 }
 
+/* Light gray backgrounds used in summary boxes and buttons */
+.dark .bg-\[\#F8FAFC\] {
+  background-color: var(--card);
+}
+
+.dark .bg-gray-200,
+.dark .bg-gray-300 {
+  background-color: var(--muted);
+}
+
 .dark .border-slate-100,
 .dark .border-slate-200,
 .dark .border-slate-300 {

@@ -1,30 +1,36 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>
 }
 
+const DISMISS_KEY = "pwa-install-dismissed-at"
+const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000 // 1 hafta
+
 export function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [visible, setVisible] = useState(false)
   const [isIos, setIsIos] = useState(false)
 
+  // Dismiss expiry timestamp (ms since epoch), shared between effect and handlers
+  const dismissUntilRef = useRef<number | null>(null)
+
   useEffect(() => {
     if (typeof window === "undefined") return
-
-    const DISMISS_KEY = "pwa-install-dismissed-at"
-    const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000 // 1 hafta
 
     let recentlyDismissed = false
     try {
       const raw = window.localStorage.getItem(DISMISS_KEY)
       if (raw) {
-        const ts = Number(raw)
-        if (!Number.isNaN(ts) && Date.now() - ts < DISMISS_DURATION_MS) {
-          recentlyDismissed = true
+        const expiry = Number(raw)
+        if (!Number.isNaN(expiry)) {
+          dismissUntilRef.current = expiry
+          if (Date.now() < expiry) {
+            recentlyDismissed = true
+          }
         }
       }
     } catch {
@@ -43,20 +49,24 @@ export function PwaInstallPrompt() {
       navigator.serviceWorker.register("/sw.js").catch(() => {})
     }
 
-    if (recentlyDismissed) {
-      return
-    }
-
     const handleBeforeInstallPrompt = (event: Event) => {
+      // Agar foydalanuvchi yaqinda rad etgan bo'lsa, umuman ko'rsatmaymiz
+      const dismissUntil = dismissUntilRef.current
+      if (typeof dismissUntil === "number" && Date.now() < dismissUntil) {
+        return
+      }
+
       event.preventDefault()
       setDeferredPrompt(event as BeforeInstallPromptEvent)
       setVisible(true)
     }
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
+    if (!recentlyDismissed) {
+      window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
 
-    if (isIosDevice && !isStandalone) {
-      setVisible(true)
+      if (isIosDevice && !isStandalone) {
+        setVisible(true)
+      }
     }
 
     return () => {
@@ -82,7 +92,9 @@ export function PwaInstallPrompt() {
 
     if (typeof window === "undefined") return
     try {
-      window.localStorage.setItem("pwa-install-dismissed-at", String(Date.now()))
+      const expiry = Date.now() + DISMISS_DURATION_MS
+      dismissUntilRef.current = expiry
+      window.localStorage.setItem(DISMISS_KEY, String(expiry))
     } catch {
       // localStorage yo'q bo'lsa, shunchaki e'tiborsiz qoldiramiz
     }
