@@ -6,6 +6,7 @@ import { DataTable } from "@/components/data-table"
 import { printSaleReceipt } from "@/components/print-receipt"
 import { Button } from "@/components/button"
 import { Modal } from "@/components/modal"
+import { SelectField } from "@/components/select-field"
 import { ApiError, get, post } from "@/styles/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
@@ -185,7 +186,7 @@ export default function SalesPage() {
           actions={(row) => (
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => printSaleReceipt(row)}>
-                Чек
+                Chek
               </Button>
             </div>
           )}
@@ -292,33 +293,32 @@ export default function SalesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#0F172A] mb-2">Mahsulot turi</label>
-              <select
+              <SelectField
                 value={productType}
-                onChange={(e) => setProductType(e.target.value)}
-                className="w-full sm-select"
-              >
-                <option value="Shagal">Shagal</option>
-                <option value="Qum">Qum</option>
-                <option value="SHibyon">SHibyon</option>
-                <option value="Kampot">Kampot</option>
-              </select>
+                onChange={(value) => setProductType(value)}
+                options={[
+                  { value: "Shagal", label: "Shagal" },
+                  { value: "Qum", label: "Qum" },
+                  { value: "SHibyon", label: "SHibyon" },
+                  { value: "Kampot", label: "Kampot" },
+                ]}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-[#0F172A] mb-2">Press liniyasi</label>
-              <select
+              <SelectField
                 value={line}
-                onChange={(e) => {
-                  setLine(e.target.value as "" | "A" | "B")
+                onChange={(value) => {
+                  setLine(value as "" | "A" | "B")
                   setLineTouched(true)
                 }}
-                onBlur={() => setLineTouched(true)}
-                className={`w-full sm-select ${!line && lineTouched ? "border-red-500 focus:ring-red-500" : ""}`}
-              >
-                <option value="">Tanlang...</option>
-                <option value="A">A liniyasi</option>
-                <option value="B">B liniyasi</option>
-              </select>
-              {!line && lineTouched && (
+                options={[
+                  { value: "A", label: "A liniyasi" },
+                  { value: "B", label: "B liniyasi" },
+                ]}
+                placeholder="Tanlang..."
+              />
+              { !line && lineTouched && (
                 <p className="mt-1 text-xs text-red-600">Press liniyasini tanlang</p>
               )}
             </div>
@@ -380,15 +380,15 @@ export default function SalesPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-[#0F172A] mb-2">To'lov turi</label>
-            <select
+            <SelectField
               value={paymentType}
-              onChange={(e) => setPaymentType(e.target.value)}
-              className="w-full sm-select"
-            >
-              <option value="Naqd">Naqd</option>
-              <option value="Qarzga">Qarzga</option>
-              <option value="Click">Click</option>
-            </select>
+              onChange={(value) => setPaymentType(value)}
+              options={[
+                { value: "Naqd", label: "Naqd" },
+                { value: "Qarzga", label: "Qarzga" },
+                { value: "Click", label: "Click" },
+              ]}
+            />
           </div>
           {paymentType === "Qarzga" && (
             <div>

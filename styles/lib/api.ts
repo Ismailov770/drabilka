@@ -90,7 +90,7 @@ export async function apiRequest<T = any>(path: string, options: RequestOptions 
   }
 
   if (!response.ok) {
-    throw new ApiError(response.statusText || "Request failed", response.status, data)
+    throw new ApiError(response.statusText || "So'rov bajarilmadi", response.status, data)
   }
 
   return data as T

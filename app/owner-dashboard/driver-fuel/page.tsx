@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 
 import { DataTable } from "@/components/data-table"
 import { Modal } from "@/components/modal"
+import { SelectField } from "@/components/select-field"
 import { ApiError, get } from "@/styles/lib/api"
 
 interface DriverFuelRecord {
@@ -279,33 +280,25 @@ export default function OwnerDriverFuelPage() {
           </div>
           <div>
             <label className="text-sm font-semibold text-slate-900 mb-2 block">Haydovchi</label>
-            <select
+            <SelectField
               value={filters.driver}
-              onChange={(e) => setFilters((prev) => ({ ...prev, driver: e.target.value }))}
-              className="w-full sm-select"
-            >
-              <option value="all">Barchasi</option>
-              {driverOptions.map((driver) => (
-                <option key={driver.id} value={String(driver.id)}>
-                  {driver.label}
-                </option>
-              ))}
-            </select>
+              onChange={(driver) => setFilters((prev) => ({ ...prev, driver }))}
+              options={[
+                { value: "all", label: "Barchasi" },
+                ...driverOptions.map((driver) => ({ value: String(driver.id), label: driver.label })),
+              ]}
+            />
           </div>
           <div>
             <label className="text-sm font-semibold text-slate-900 mb-2 block">Transport</label>
-            <select
+            <SelectField
               value={filters.vehicle}
-              onChange={(e) => setFilters((prev) => ({ ...prev, vehicle: e.target.value }))}
-              className="w-full sm-select"
-            >
-              <option value="all">Barchasi</option>
-              {vehicleOptions.map((vehicle) => (
-                <option key={vehicle.id} value={String(vehicle.id)}>
-                  {vehicle.label}
-                </option>
-              ))}
-            </select>
+              onChange={(vehicle) => setFilters((prev) => ({ ...prev, vehicle }))}
+              options={[
+                { value: "all", label: "Barchasi" },
+                ...vehicleOptions.map((vehicle) => ({ value: String(vehicle.id), label: vehicle.label })),
+              ]}
+            />
           </div>
         </div>
         <div className="flex justify-end">

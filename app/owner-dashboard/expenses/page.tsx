@@ -230,18 +230,19 @@ export default function OwnerExpensesPage() {
           </div>
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Kategoriya</label>
-            <select
+            <SelectField
               value={filters.category}
-              onChange={(e) => setFilters((prev) => ({ ...prev, category: e.target.value }))}
-              className="w-full sm-select"
-            >
-              <option value="all">Barchasi</option>
-              <option value="Energiya">Energiya</option>
-              <option value="Logistika">Logistika</option>
-              <option value="Texnik">Texnik</option>
-              <option value="Boshqa">Boshqa</option>
-            </select>
+              onChange={(category) => setFilters((prev) => ({ ...prev, category }))}
+              options={[
+                { value: "all", label: "Barchasi" },
+                { value: "Energiya", label: "Energiya" },
+                { value: "Logistika", label: "Logistika" },
+                { value: "Texnik", label: "Texnik" },
+                { value: "Boshqa", label: "Boshqa" },
+              ]}
+            />
           </div>
+
         </div>
         <div className="flex justify-end">
           <button

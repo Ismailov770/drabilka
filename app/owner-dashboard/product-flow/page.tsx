@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react"
 import { DataTable } from "@/components/data-table"
 import { Modal } from "@/components/modal"
 import { useToast } from "@/hooks/use-toast"
+import { SelectField } from "@/components/select-field"
 import { ApiError, get, post } from "@/styles/lib/api"
 
 type ProductFlow = {
@@ -155,16 +156,16 @@ export default function OwnerProductFlowPage() {
           </div>
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Mahsulot</label>
-            <select
+            <SelectField
               value={filters.product}
-              onChange={(e) => setFilters((prev) => ({ ...prev, product: e.target.value }))}
-              className="w-full sm-select"
-            >
-              <option value="all">Barchasi</option>
-              <option value="M400">M400</option>
-              <option value="M500">M500</option>
-              <option value="Sul'fatge chidamli">Sul'fatge chidamli</option>
-            </select>
+              onChange={(product) => setFilters((prev) => ({ ...prev, product }))}
+              options={[
+                { value: "all", label: "Barchasi" },
+                { value: "M400", label: "M400" },
+                { value: "M500", label: "M500" },
+                { value: "Sul'fatge chidamli", label: "Sul'fatge chidamli" },
+              ]}
+            />
           </div>
         </div>
         <div className="flex justify-end">

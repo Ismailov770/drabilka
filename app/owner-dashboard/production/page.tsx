@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { DataTable } from "@/components/data-table"
+import { SelectField } from "@/components/select-field"
 import { ApiError, get } from "@/styles/lib/api"
 
 type ProductOutflow = {
@@ -152,29 +153,29 @@ export default function OwnerProductionPage() {
           </div>
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Mahsulot turi</label>
-            <select
+            <SelectField
               value={filters.product}
-              onChange={(e) => setFilters((prev) => ({ ...prev, product: e.target.value }))}
-              className="w-full sm-select"
-            >
-              <option value="all">Barchasi</option>
-              <option value="M400">M400</option>
-              <option value="M500">M500</option>
-              <option value="Sul'fatge chidamli">Sul'fatge chidamli</option>
-            </select>
+              onChange={(product) => setFilters((prev) => ({ ...prev, product }))}
+              options={[
+                { value: "all", label: "Barchasi" },
+                { value: "M400", label: "M400" },
+                { value: "M500", label: "M500" },
+                { value: "Sul'fatge chidamli", label: "Sul'fatge chidamli" },
+              ]}
+            />
           </div>
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Smena</label>
-            <select
+            <SelectField
               value={filters.shift}
-              onChange={(e) => setFilters((prev) => ({ ...prev, shift: e.target.value }))}
-              className="w-full sm-select"
-            >
-              <option value="all">Barchasi</option>
-              <option value="MORNING">Tonggi</option>
-              <option value="DAY">Kunduzgi</option>
-              <option value="NIGHT">Kechgi</option>
-            </select>
+              onChange={(shift) => setFilters((prev) => ({ ...prev, shift }))}
+              options={[
+                { value: "all", label: "Barchasi" },
+                { value: "MORNING", label: "Tonggi" },
+                { value: "DAY", label: "Kunduzgi" },
+                { value: "NIGHT", label: "Kechgi" },
+              ]}
+            />
           </div>
         </div>
         <div className="flex justify-end">

@@ -4,6 +4,7 @@ import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/button"
 import { Modal } from "@/components/modal"
 import { FileDropzone } from "@/components/file-dropzone"
+import { SelectField } from "@/components/select-field"
 import { useState } from "react"
 
 export default function RepairsPage() {
@@ -69,16 +70,17 @@ export default function RepairsPage() {
         <form className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#0F172A] mb-2">Equipment *</label>
-            <select
-              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-              required
-            >
-              <option value="">Select equipment</option>
-              <option>Kiln Furnace</option>
-              <option>Crusher Mill</option>
-              <option>Conveyor Belt</option>
-              <option>Cement Storage Tank</option>
-            </select>
+            <SelectField
+              value={""}
+              onChange={() => {}}
+              options={[
+                { value: "Kiln Furnace", label: "Kiln Furnace" },
+                { value: "Crusher Mill", label: "Crusher Mill" },
+                { value: "Conveyor Belt", label: "Conveyor Belt" },
+                { value: "Cement Storage Tank", label: "Cement Storage Tank" },
+              ]}
+              placeholder="Select equipment"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-[#0F172A] mb-2">Issue Description *</label>

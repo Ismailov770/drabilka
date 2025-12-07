@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/button"
+import { SelectField } from "@/components/select-field"
 
 export default function TimelineViewPage() {
   const [selectedDate, setSelectedDate] = useState("2024-01-15")
@@ -35,16 +36,16 @@ export default function TimelineViewPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-[#0F172A] mb-2">Haydovchi bo'yicha filtr</label>
-            <select
+            <SelectField
               value={selectedDriver}
-              onChange={(e) => setSelectedDriver(e.target.value)}
-              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
-            >
-              <option value="all">Barcha haydovchilar</option>
-              <option value="ahmed">Ahmed K.</option>
-              <option value="karim">Karim S.</option>
-              <option value="omar">Omar R.</option>
-            </select>
+              onChange={(value) => setSelectedDriver(value)}
+              options={[
+                { value: "all", label: "Barcha haydovchilar" },
+                { value: "ahmed", label: "Ahmed K." },
+                { value: "karim", label: "Karim S." },
+                { value: "omar", label: "Omar R." },
+              ]}
+            />
           </div>
           <div className="flex items-end">
             <Button variant="outline" size="lg" className="w-full bg-transparent">

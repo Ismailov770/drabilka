@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react"
 import { DataTable } from "@/components/data-table"
 import { Modal } from "@/components/modal"
 import { FileDropzone } from "@/components/file-dropzone"
+import { SelectField } from "@/components/select-field"
 import { API_BASE_URL, ApiError, get, post } from "@/styles/lib/api"
 
 type EquipmentMovement = {
@@ -226,28 +227,28 @@ export default function OwnerEquipmentFlowPage() {
           </div>
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Kategoriya</label>
-            <select
+            <SelectField
               value={filters.category}
-              onChange={(e) => setFilters((prev) => ({ ...prev, category: e.target.value }))}
-              className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-            >
-              <option value="all">Barchasi</option>
-              <option value="Asosiy texnika">Asosiy texnika</option>
-              <option value="Yordamchi texnika">Yordamchi texnika</option>
-              <option value="Energiya bloki">Energiya bloki</option>
-            </select>
+              onChange={(category) => setFilters((prev) => ({ ...prev, category }))}
+              options={[
+                { value: "all", label: "Barchasi" },
+                { value: "Asosiy texnika", label: "Asosiy texnika" },
+                { value: "Yordamchi texnika", label: "Yordamchi texnika" },
+                { value: "Energiya bloki", label: "Energiya bloki" },
+              ]}
+            />
           </div>
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Yo'nalish</label>
-            <select
+            <SelectField
               value={filters.movement}
-              onChange={(e) => setFilters((prev) => ({ ...prev, movement: e.target.value }))}
-              className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-            >
-              <option value="all">Barchasi</option>
-              <option value="Kirim">Kirim</option>
-              <option value="Chiqim">Chiqim</option>
-            </select>
+              onChange={(movement) => setFilters((prev) => ({ ...prev, movement }))}
+              options={[
+                { value: "all", label: "Barchasi" },
+                { value: "Kirim", label: "Kirim" },
+                { value: "Chiqim", label: "Chiqim" },
+              ]}
+            />
           </div>
         </div>
         <div className="flex justify-end">
@@ -468,26 +469,26 @@ export default function OwnerEquipmentFlowPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Kategoriya</label>
-              <select
+              <SelectField
                 value={newMovement.category}
-                onChange={(e) => setNewMovement((prev) => ({ ...prev, category: e.target.value }))}
-                className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-              >
-                <option value="Asosiy texnika">Asosiy texnika</option>
-                <option value="Yordamchi texnika">Yordamchi texnika</option>
-                <option value="Energiya bloki">Energiya bloki</option>
-              </select>
+                onChange={(category) => setNewMovement((prev) => ({ ...prev, category }))}
+                options={[
+                  { value: "Asosiy texnika", label: "Asosiy texnika" },
+                  { value: "Yordamchi texnika", label: "Yordamchi texnika" },
+                  { value: "Energiya bloki", label: "Energiya bloki" },
+                ]}
+              />
             </div>
             <div>
               <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Yo'nalish</label>
-              <select
+              <SelectField
                 value={newMovement.movement}
-                onChange={(e) => setNewMovement((prev) => ({ ...prev, movement: e.target.value }))}
-                className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-              >
-                <option value="Kirim">Kirim</option>
-                <option value="Chiqim">Chiqim</option>
-              </select>
+                onChange={(movement) => setNewMovement((prev) => ({ ...prev, movement }))}
+                options={[
+                  { value: "Kirim", label: "Kirim" },
+                  { value: "Chiqim", label: "Chiqim" },
+                ]}
+              />
             </div>
           </div>
           <div>

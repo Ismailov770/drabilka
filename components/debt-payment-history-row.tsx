@@ -50,10 +50,11 @@ export function DebtPaymentHistoryRow({ debtId, outstanding }: DebtPaymentHistor
       } catch (err: any) {
         if (cancelled) return
         if (err instanceof ApiError) {
-          const backendMessage = (err.data && (err.data as any).message) || err.message || "Failed to load payment history"
+          const backendMessage =
+            (err.data && (err.data as any).message) || err.message || "To'lovlar tarixini yuklashda xatolik yuz berdi"
           setError(backendMessage)
         } else {
-          setError("Failed to load payment history. Please try again.")
+          setError("To'lovlar tarixini yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
         }
       } finally {
         if (!cancelled) {
@@ -79,10 +80,10 @@ export function DebtPaymentHistoryRow({ debtId, outstanding }: DebtPaymentHistor
   return (
     <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h4 className="font-semibold text-slate-900">Payment history</h4>
+        <h4 className="font-semibold text-slate-900">To'lovlar tarixi</h4>
         {isLoading && (
           <span className="inline-flex items-center gap-2 text-xs text-slate-500">
-            <Spinner className="h-4 w-4" /> Loading...
+            <Spinner className="h-4 w-4" /> Yuklanmoqda...
           </span>
         )}
       </div>
@@ -95,13 +96,13 @@ export function DebtPaymentHistoryRow({ debtId, outstanding }: DebtPaymentHistor
             onClick={handleRetry}
             className="shrink-0 rounded-full border border-red-200 px-2 py-1 text-[11px] font-medium text-red-700 hover:bg-red-100"
           >
-            Retry
+            Qayta urinib ko'rish
           </button>
         </div>
       )}
 
       {!isLoading && !error && payments && payments.length === 0 && (
-        <p className="text-xs text-slate-500">No payments recorded yet.</p>
+        <p className="text-xs text-slate-500">Hozircha to'lovlar qayd etilmagan.</p>
       )}
 
       {!error && payments && payments.length > 0 && (
@@ -109,10 +110,10 @@ export function DebtPaymentHistoryRow({ debtId, outstanding }: DebtPaymentHistor
           <table className="min-w-full text-xs md:text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-3 py-2 text-left font-medium text-slate-600">Date</th>
-                <th className="px-3 py-2 text-left font-medium text-slate-600">Amount paid</th>
-                <th className="px-3 py-2 text-left font-medium text-slate-600">Status after</th>
-                <th className="px-3 py-2 text-left font-medium text-slate-600">Comment</th>
+                <th className="px-3 py-2 text-left font-medium text-slate-600">Sana</th>
+                <th className="px-3 py-2 text-left font-medium text-slate-600">To'langan summa</th>
+                <th className="px-3 py-2 text-left font-medium text-slate-600">To'lovdan keyingi holat</th>
+                <th className="px-3 py-2 text-left font-medium text-slate-600">Izoh</th>
               </tr>
             </thead>
             <tbody>
@@ -141,11 +142,11 @@ export function DebtPaymentHistoryRow({ debtId, outstanding }: DebtPaymentHistor
       {!error && payments && (
         <div className="mt-3 flex flex-wrap items-center gap-4 text-xs md:text-sm">
           <div>
-            <span className="text-slate-500">Total paid: </span>
+            <span className="text-slate-500">Jami to'langan: </span>
             <span className="font-semibold text-slate-900">{totalPaid.toLocaleString()} so'm</span>
           </div>
           <div>
-            <span className="text-slate-500">Outstanding: </span>
+            <span className="text-slate-500">Qoldiq qarz: </span>
             <span className="font-semibold text-red-700">{outstanding.toLocaleString()} so'm</span>
           </div>
         </div>

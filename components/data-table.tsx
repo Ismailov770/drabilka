@@ -89,7 +89,7 @@ export function DataTable({ columns, data, searchableFields = [], actions, rende
         <div className="flex gap-4">
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Qidirish..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value)
@@ -120,7 +120,9 @@ export function DataTable({ columns, data, searchableFields = [], actions, rende
                   )}
                 </th>
               ))}
-              {actions && <th className="px-6 py-3 text-left font-semibold text-slate-700 dark:text-slate-100">Actions</th>}
+              {actions && (
+                <th className="px-6 py-3 text-left font-semibold text-slate-700 dark:text-slate-100">Amallar</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -137,7 +139,7 @@ export function DataTable({ columns, data, searchableFields = [], actions, rende
                           type="button"
                           onClick={() => toggleRowExpanded(rowKey)}
                           className="inline-flex h-7 w-7 items-center justify-center rounded-full hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-300"
-                          aria-label={isExpanded ? "Collapse row" : "Expand row"}
+                          aria-label={isExpanded ? "Qatorni yopish" : "Qatorni ochish"}
                         >
                           <ChevronRight className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
                         </button>
@@ -290,7 +292,7 @@ export function DataTable({ columns, data, searchableFields = [], actions, rende
       {totalPages > 1 && (
         <div className="flex justify-between items-center">
           <span className="text-sm text-slate-500 dark:text-slate-400">
-            Page {currentPage} of {totalPages}
+            Sahifa {currentPage} / {totalPages}
           </span>
           <div className="flex gap-2">
             <button
@@ -298,14 +300,14 @@ export function DataTable({ columns, data, searchableFields = [], actions, rende
               disabled={currentPage === 1}
               className="px-3 py-1 border border-slate-200 dark:border-slate-700 rounded-full text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800"
             >
-              Previous
+              Oldingi
             </button>
             <button
               onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
               className="px-3 py-1 border border-slate-200 dark:border-slate-700 rounded-full text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800"
             >
-              Next
+              Keyingi
             </button>
           </div>
         </div>

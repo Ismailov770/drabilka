@@ -6,6 +6,7 @@ import { Button } from "@/components/button"
 import { Modal } from "@/components/modal"
 import { StatCard } from "@/components/stat-card"
 import { CheckCircle2, CreditCard, Hourglass } from "lucide-react"
+import { SelectField } from "@/components/select-field"
 import { ApiError, get, post } from "@/styles/lib/api"
 import { DebtPaymentHistoryRow } from "@/components/debt-payment-history-row"
 
@@ -160,28 +161,24 @@ export default function CashierDebtsPage() {
       <div className="bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
           <div className="flex flex-wrap items-center gap-3">
-            <select
+            <SelectField
               value={companyFilter}
-              onChange={(e) => setCompanyFilter(e.target.value)}
-              className="sm-select text-sm"
-            >
-              <option value="all">Barcha kompaniyalar</option>
-              {companies.map((c, index) => (
-                <option key={index} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <select
+              onChange={(value) => setCompanyFilter(value)}
+              options={[
+                { value: "all", label: "Barcha kompaniyalar" },
+                ...companies.map((c) => ({ value: c, label: c })),
+              ]}
+            />
+            <SelectField
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="sm-select text-sm"
-            >
-              <option value="all">Barcha holatlar</option>
-              <option value="Open">Ochiq</option>
-              <option value="Partial">Qisman to'langan</option>
-              <option value="Paid">To'langan</option>
-            </select>
+              onChange={(value) => setStatusFilter(value)}
+              options={[
+                { value: "all", label: "Barcha holatlar" },
+                { value: "Open", label: "Ochiq" },
+                { value: "Partial", label: "Qisman to'langan" },
+                { value: "Paid", label: "To'langan" },
+              ]}
+            />
           </div>
         </div>
 
@@ -220,11 +217,15 @@ export default function CashierDebtsPage() {
 
             <div>
               <label className="block text-sm text-slate-700 mb-1">To'lov turi</label>
-              <select value={payType} onChange={(e) => setPayType(e.target.value)} className="w-full px-3 py-2 border rounded-lg">
-                <option value="Cash">Naqd</option>
-                <option value="Transfer">Bank o'tkazmasi</option>
-                <option value="Credit">Qarzga</option>
-              </select>
+              <SelectField
+                value={payType}
+                onChange={(value) => setPayType(value)}
+                options={[
+                  { value: "Cash", label: "Naqd" },
+                  { value: "Transfer", label: "Bank o'tkazmasi" },
+                  { value: "Credit", label: "Qarzga" },
+                ]}
+              />
             </div>
 
             {modalError && (

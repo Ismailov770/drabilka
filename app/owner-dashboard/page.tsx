@@ -276,6 +276,49 @@ export default function OwnerDashboard() {
         </div>
       </div>
 
+      {/* Umumiy statistika bo'yicha kartochkalar */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+          <p className="text-xs font-medium text-slate-500">Ishlab chiqarilgan (m³)</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-900">
+            {numberFormatter.format(totals.produced)}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            {filteredTimeline.length ? "Tanlangan davr bo'yicha" : "Ma'lumot yo'q"}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+          <p className="text-xs font-medium text-slate-500">Sotilgan (m³)</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-900">
+            {numberFormatter.format(totals.sold)}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            {filteredTimeline.length ? "Tanlangan davr bo'yicha" : "Ma'lumot yo'q"}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+          <p className="text-xs font-medium text-slate-500">Umumiy rasxodlar (so'm)</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-900">
+            {currencyFormatter.format(totals.expenses)} so'm
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            {filteredTimeline.length ? "Tanlangan davr bo'yicha" : "Ma'lumot yo'q"}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+          <p className="text-xs font-medium text-slate-500">Ish haqi (so'm)</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-900">
+            {currencyFormatter.format(totals.payroll)} so'm
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            {filteredTimeline.length ? "Tanlangan davr bo'yicha" : "Ma'lumot yo'q"}
+          </p>
+        </div>
+      </div>
+
       {/* Batafsil bo'limlar */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100">
