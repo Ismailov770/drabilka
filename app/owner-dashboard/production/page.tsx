@@ -205,7 +205,7 @@ export default function OwnerProductionPage() {
           searchableFields={["batchId", "product", "shift", "line", "operator", "transport"]}
           renderCell={(row, col) => {
             if (col.key === "quantity") {
-              return `${numberFormatter.format(row[col.key])} ${row.unit}`
+              return `${numberFormatter.format(row[col.key])} m³`
             }
             if (col.key === "price") {
               return `${numberFormatter.format(row[col.key])} so'm`

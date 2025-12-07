@@ -12,7 +12,6 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "DrabilkaUz - Cement Factory Management",
   description: "Enterprise management system for cement factories",
-  generator: "v0.app",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [

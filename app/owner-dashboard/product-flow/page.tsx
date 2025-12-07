@@ -311,7 +311,7 @@ export default function OwnerProductFlowPage() {
                 product,
                 direction: "Kirim",
                 quantity: quantityValue,
-                unit: "tonna",
+                unit: "m3",
                 amount: amountValue,
                 loggedAt,
               }

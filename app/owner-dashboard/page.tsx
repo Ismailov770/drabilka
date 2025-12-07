@@ -45,7 +45,7 @@ type VehicleLogEntry = {
 const dateFormatter = new Intl.DateTimeFormat("uz-UZ", { day: "2-digit", month: "short" })
 const dateTimeFormatter = new Intl.DateTimeFormat("uz-UZ", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
 const numberFormatter = new Intl.NumberFormat("ru-RU")
-const currencyFormatter = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
+const currencyFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 })
 const quickRanges = [
   { label: "7 kun", days: 7 },
   { label: "14 kun", days: 14 },
@@ -276,8 +276,6 @@ export default function OwnerDashboard() {
         </div>
       </div>
 
-  
-
       {/* Batafsil bo'limlar */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100">
@@ -326,7 +324,7 @@ export default function OwnerDashboard() {
                   <p className="font-semibold text-slate-900">{item.category}</p>
                 </div>
                 <p className="text-sm text-slate-400 mb-2">Kategoriya bo'yicha umumiy sarf</p>
-                <p className="text-lg font-semibold text-slate-900">{currencyFormatter.format(item.total)}</p>
+                <p className="text-lg font-semibold text-slate-900">{currencyFormatter.format(item.total)} so'm</p>
               </div>
             ))}
             {expenseSignals.length === 0 && !expensesError && (

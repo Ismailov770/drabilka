@@ -443,8 +443,8 @@ ProductionRecord {
   product: string       // "M400", "M500", "Sul'fatga chidamli" ...
   shift: string         // смена
   line: string
-  quantity: number      // в тоннах
-  unit: string          // "tonna"
+  quantity: number      // в кубах (m³)
+  unit: string          // "m3"
   price: number
   transport: string
   operator: string

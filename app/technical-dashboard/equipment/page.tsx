@@ -53,7 +53,7 @@ export default function EquipmentPage() {
     { key: "name", label: "Equipment Name", sortable: true },
     { key: "model", label: "Model", sortable: true },
     { key: "serial", label: "Serial Number", sortable: true },
-    { key: "price", label: "Price ($)", sortable: true },
+    { key: "price", label: "Price (so'm)", sortable: true },
     { key: "purchaseDate", label: "Purchase Date", sortable: true },
   ]
 
@@ -108,12 +108,16 @@ export default function EquipmentPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#0F172A] mb-2">Purchase Price ($)</label>
+            <label className="block text-sm font-medium text-[#0F172A] mb-2">Purchase Price (so'm)</label>
             <input type="number" placeholder="0" className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg" />
           </div>
           <div>
             <label className="block text-sm font-medium text-[#0F172A] mb-2">Purchase Date</label>
-            <input type="date" className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg" />
+            <input
+              type="date"
+              defaultValue={new Date().toISOString().split("T")[0]}
+              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
+            />
           </div>
           <div>
             <FileDropzone

@@ -127,7 +127,7 @@ export function DebtPaymentHistoryRow({ debtId, outstanding }: DebtPaymentHistor
                 return (
                   <tr key={p.id} className="border-t border-slate-100">
                     <td className="px-3 py-2 text-slate-800">{p.date}</td>
-                    <td className="px-3 py-2 text-slate-800">${p.amount.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-slate-800">{p.amount.toLocaleString()} so'm</td>
                     <td className={`px-3 py-2 font-medium ${statusColor}`}>{p.statusAfterPayment}</td>
                     <td className="px-3 py-2 text-slate-600">{p.comment || "—"}</td>
                   </tr>
@@ -142,11 +142,11 @@ export function DebtPaymentHistoryRow({ debtId, outstanding }: DebtPaymentHistor
         <div className="mt-3 flex flex-wrap items-center gap-4 text-xs md:text-sm">
           <div>
             <span className="text-slate-500">Total paid: </span>
-            <span className="font-semibold text-slate-900">${totalPaid.toLocaleString()}</span>
+            <span className="font-semibold text-slate-900">{totalPaid.toLocaleString()} so'm</span>
           </div>
           <div>
             <span className="text-slate-500">Outstanding: </span>
-            <span className="font-semibold text-red-700">${outstanding.toLocaleString()}</span>
+            <span className="font-semibold text-red-700">{outstanding.toLocaleString()} so'm</span>
           </div>
         </div>
       )}

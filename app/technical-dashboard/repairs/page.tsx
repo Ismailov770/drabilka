@@ -44,7 +44,7 @@ export default function RepairsPage() {
     { key: "equipment", label: "Equipment", sortable: true },
     { key: "issue", label: "Issue Description", sortable: false },
     { key: "date", label: "Date", sortable: true },
-    { key: "cost", label: "Cost ($)", sortable: true },
+    { key: "cost", label: "Cost (so'm)", sortable: true },
     { key: "tech", label: "Technician", sortable: true },
     { key: "status", label: "Status", sortable: true },
   ]
@@ -91,10 +91,15 @@ export default function RepairsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-[#0F172A] mb-2">Repair Date *</label>
-            <input type="date" className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg" required />
+            <input
+              type="date"
+              defaultValue={new Date().toISOString().split("T")[0]}
+              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
+              required
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#0F172A] mb-2">Repair Cost ($)</label>
+            <label className="block text-sm font-medium text-[#0F172A] mb-2">Repair Cost (so'm)</label>
             <input type="number" placeholder="0" className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg" />
           </div>
           <div>

@@ -145,8 +145,8 @@ export default function SalesPage() {
     { key: "carNumber", label: "Avto raqami", sortable: true },
     { key: "line", label: "Press liniyasi", sortable: true },
     { key: "material", label: "Mahsulot", sortable: true },
-    { key: "weight", label: "Og'irlik (t)", sortable: true },
-    { key: "unitPrice", label: "Narx (so'm / t)", sortable: true },
+    { key: "weight", label: "Hajm (m³)", sortable: true },
+    { key: "unitPrice", label: "Narx (so'm / m³)", sortable: true },
     { key: "price", label: "Summa (so'm)", sortable: true },
     { key: "paymentType", label: "To'lov turi", sortable: true },
     { key: "date", label: "Sana", sortable: true },
@@ -324,7 +324,7 @@ export default function SalesPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#0F172A] mb-2">Og'irlik (t)</label>
+            <label className="block text-sm font-medium text-[#0F172A] mb-2">Hajm (m³)</label>
             <input
               type="number"
               value={weight}
@@ -347,7 +347,7 @@ export default function SalesPage() {
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#0F172A] mb-2">Narx (so'm / t)</label>
+            <label className="block text-sm font-medium text-[#0F172A] mb-2">Narx (so'm / m³)</label>
             <input
               type="number"
               value={unitPrice}

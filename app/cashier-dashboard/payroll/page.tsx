@@ -94,8 +94,6 @@ const columns = [
   { key: "role", label: "Lavozim", sortable: false },
   { key: "month", label: "Oyi", sortable: true },
   { key: "baseSalary", label: "Asosiy oylik (so'm)", sortable: true },
-  { key: "overtime", label: "Qo'shimcha (so'm)", sortable: true },
-  { key: "deductions", label: "Ushlab qolinishi (so'm)", sortable: true },
   { key: "total", label: "Umumiy oyligi (so'm)", sortable: true },
   { key: "advance", label: "Olgan avansi (so'm)", sortable: true },
   { key: "remaining", label: "Qoldiq (so'm)", sortable: true },
@@ -127,7 +125,7 @@ export default function CashierPayrollPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<PayrollRecord | null>(null)
   const [paymentData, setPaymentData] = useState({
     amount: "",
-    paymentDate: "",
+    paymentDate: new Date().toISOString().split("T")[0],
     notes: "",
   })
   const [payError, setPayError] = useState<string | null>(null)
@@ -415,7 +413,7 @@ export default function CashierPayrollPage() {
                       setSelectedEmployee(record)
                       setPaymentData({
                         amount: record.remaining > 0 ? record.remaining.toString() : "",
-                        paymentDate: "",
+                        paymentDate: new Date().toISOString().split("T")[0],
                         notes: "",
                       })
                       setIsPaySalaryModalOpen(true)

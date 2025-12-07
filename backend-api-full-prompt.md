@@ -461,7 +461,7 @@ Product {
 {
   "code": "M400",
   "name": "Oddiy sement",
-  "unit": "tonna",
+  "unit": "m3",
   "category": "sement"
 }
 ```
@@ -508,7 +508,7 @@ ProductionBatch {
   "shift": "MORNING",
   "line": "Line 1",
   "quantity": 100,
-  "unit": "tonna",
+  "unit": "m3",
   "price": 100000,
   "transport": "Truck 1",
   "operator": "Operator name",

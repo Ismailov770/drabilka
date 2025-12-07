@@ -171,7 +171,7 @@ export function DataTable({ columns, data, searchableFields = [], actions, rende
                   if (col.key === "quantity" && calculatedTotals.quantity !== undefined) {
                     return (
                       <td key={col.key} className="px-6 py-4 text-slate-900 dark:text-slate-100 text-sm">
-                        {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(calculatedTotals.quantity)} tonna
+                        {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(calculatedTotals.quantity)} m³
                       </td>
                     )
                   }
