@@ -7,6 +7,7 @@ import { Modal } from "@/components/modal"
 import { StatCard } from "@/components/stat-card"
 import { CheckCircle2, CreditCard, Hourglass } from "lucide-react"
 import { ApiError, get, post } from "@/styles/lib/api"
+import { DebtPaymentHistoryRow } from "@/components/debt-payment-history-row"
 
 type Debt = {
   id: string
@@ -93,7 +94,7 @@ export default function CashierDebtsPage() {
       const body = {
         amount,
         type: payType,
-        at: new Date().toISOString(),
+        paidAt: new Date().toISOString(),
       }
       const response = await post<Debt | { debt?: Debt }>(`/debts/${selectedDebt.id}/payments`, body)
       const updated = (response as any).debt ?? response
@@ -116,12 +117,12 @@ export default function CashierDebtsPage() {
 
   const columns = [
     { key: "id", label: "ID", sortable: true },
-    { key: "company", label: "Company / Client", sortable: true },
-    { key: "saleId", label: "Sale / Invoice", sortable: true },
-    { key: "amountDue", label: "Amount Due ($)", sortable: true },
-    { key: "outstanding", label: "Outstanding ($)", sortable: true },
-    { key: "dueDate", label: "Due Date", sortable: true },
-    { key: "status", label: "Status", sortable: true },
+    { key: "company", label: "Kompaniya / mijoz", sortable: true },
+    { key: "saleId", label: "Sotuv / hisob-faktura", sortable: true },
+    { key: "amountDue", label: "Umumiy qarz (so'm)", sortable: true },
+    { key: "outstanding", label: "Qolgan qarz (so'm)", sortable: true },
+    { key: "dueDate", label: "To'lov muddati", sortable: true },
+    { key: "status", label: "Holati", sortable: true },
   ]
 
   const filtered = debts.filter(
@@ -131,26 +132,26 @@ export default function CashierDebtsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold text-slate-900">Debts / Qarzlar</h1>
-        <p className="text-sm text-slate-500 mt-1">View and manage outstanding credits / debts.</p>
+        <h1 className="text-3xl font-semibold text-slate-900">Qarzlar</h1>
+        <p className="text-sm text-slate-500 mt-1">Qarz yozuvlarini ko'rish va boshqarish.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
-          label="Total owed"
-          value={`$${totals.totalAmount.toLocaleString()}`}
+          label="Umumiy qarz"
+          value={`${totals.totalAmount.toLocaleString()} so'm`}
           icon={<CreditCard className="w-5 h-5" />}
           color="orange"
         />
         <StatCard
-          label="Outstanding"
-          value={`$${totals.totalOutstanding.toLocaleString()}`}
+          label="Qolgan qarz"
+          value={`${totals.totalOutstanding.toLocaleString()} so'm`}
           icon={<Hourglass className="w-5 h-5" />}
           color="red"
         />
         <StatCard
-          label="Paid"
-          value={`$${totals.paid.toLocaleString()}`}
+          label="To'langan"
+          value={`${totals.paid.toLocaleString()} so'm`}
           icon={<CheckCircle2 className="w-5 h-5" />}
           color="green"
         />
@@ -164,7 +165,7 @@ export default function CashierDebtsPage() {
               onChange={(e) => setCompanyFilter(e.target.value)}
               className="sm-select text-sm"
             >
-              <option value="all">All companies</option>
+              <option value="all">Barcha kompaniyalar</option>
               {companies.map((c, index) => (
                 <option key={index} value={c}>
                   {c}
@@ -176,10 +177,10 @@ export default function CashierDebtsPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="sm-select text-sm"
             >
-              <option value="all">All statuses</option>
-              <option value="Open">Open</option>
-              <option value="Partial">Partial</option>
-              <option value="Paid">Paid</option>
+              <option value="all">Barcha holatlar</option>
+              <option value="Open">Ochiq</option>
+              <option value="Partial">Qisman to'langan</option>
+              <option value="Paid">To'langan</option>
             </select>
           </div>
         </div>
@@ -191,35 +192,38 @@ export default function CashierDebtsPage() {
           searchableFields={["id", "company", "saleId", "notes"]}
           actions={(row: any) => (
             <Button variant="outline" size="sm" onClick={() => openPayModal(row as Debt)}>
-              Record Payment
+              To'lovni yozish
             </Button>
+          )}
+          expandableRow={(row: any) => (
+            <DebtPaymentHistoryRow debtId={row.id} outstanding={row.outstanding} />
           )}
         />
       </div>
 
-      <Modal title={selectedDebt ? `Record Payment - ${selectedDebt.id}` : "Record Payment"} isOpen={payModalOpen} onClose={() => setPayModalOpen(false)} size="sm">
+      <Modal title={selectedDebt ? `To'lovni yozish - ${selectedDebt.id}` : "To'lovni yozish"} isOpen={payModalOpen} onClose={() => setPayModalOpen(false)} size="sm">
         {selectedDebt && (
           <div className="space-y-4">
             <div>
-              <div className="text-sm text-slate-500">Company</div>
+              <div className="text-sm text-slate-500">Kompaniya</div>
               <div className="font-semibold">{selectedDebt.company}</div>
             </div>
             <div>
-              <div className="text-sm text-slate-500">Outstanding</div>
-              <div className="font-semibold text-red-700">${selectedDebt.outstanding}</div>
+              <div className="text-sm text-slate-500">Qolgan qarz</div>
+              <div className="font-semibold text-red-700">{selectedDebt.outstanding.toLocaleString()} so'm</div>
             </div>
 
             <div>
-              <label className="block text-sm text-slate-700 mb-1">Amount to pay ($)</label>
+              <label className="block text-sm text-slate-700 mb-1">To'lov miqdori (so'm)</label>
               <input type="number" value={payAmount} onChange={(e) => setPayAmount(e.target.value === "" ? "" : Number(e.target.value))} className="w-full px-3 py-2 border rounded-lg" />
             </div>
 
             <div>
-              <label className="block text-sm text-slate-700 mb-1">Payment Type</label>
+              <label className="block text-sm text-slate-700 mb-1">To'lov turi</label>
               <select value={payType} onChange={(e) => setPayType(e.target.value)} className="w-full px-3 py-2 border rounded-lg">
-                <option value="Cash">Cash</option>
-                <option value="Transfer">Bank Transfer</option>
-                <option value="Credit">Credit</option>
+                <option value="Cash">Naqd</option>
+                <option value="Transfer">Bank o'tkazmasi</option>
+                <option value="Credit">Qarzga</option>
               </select>
             </div>
 
@@ -229,10 +233,10 @@ export default function CashierDebtsPage() {
 
             <div className="flex gap-2">
               <Button variant="primary" onClick={recordPayment} className="w-full">
-                Record Payment
+                Saqlash
               </Button>
               <Button variant="outline" onClick={() => setPayModalOpen(false)} className="w-full">
-                Cancel
+                Bekor qilish
               </Button>
             </div>
           </div>

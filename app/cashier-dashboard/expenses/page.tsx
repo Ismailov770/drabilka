@@ -35,11 +35,11 @@ const columns = [
   { key: "title", label: "Tavsif", sortable: false },
   { key: "category", label: "Kategoriya", sortable: true },
   { key: "department", label: "Bo'lim", sortable: true },
-  { key: "amount", label: "Miqdor ($)", sortable: true },
+  { key: "amount", label: "Miqdor (so'm)", sortable: true },
   { key: "date", label: "Sana", sortable: true },
 ]
 
-const currencyFormatter = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
+const currencyFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 })
 
 export default function OwnerExpensesPage() {
   const [filters, setFilters] = useState({
@@ -113,7 +113,6 @@ export default function OwnerExpensesPage() {
 
   useEffect(() => {
     if (!isAddExpenseModalOpen) return
-    if (newExpense.category !== "Ish haqi") return
     if (employeesLoaded || employeesLoading) return
 
     let cancelled = false
@@ -156,7 +155,7 @@ export default function OwnerExpensesPage() {
     return () => {
       cancelled = true
     }
-  }, [isAddExpenseModalOpen, newExpense.category, employeesLoaded, employeesLoading])
+  }, [isAddExpenseModalOpen, employeesLoaded, employeesLoading])
 
   const withinRange = (dateStr: string) => {
     const current = new Date(dateStr).getTime()
@@ -194,7 +193,7 @@ export default function OwnerExpensesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-[#0F172A]">Umumiy rasxodlar</h1>
-        <p className="text-[#64748B] mt-1">Energiya, logistika, texnik xizmat va ish haqi bo'yicha to'liq hisobot</p>
+        <p className="text-[#64748B] mt-1">Energiya, logistika va texnik xizmat bo'yicha to'liq hisobot</p>
       </div>
 
       <div className="bg-white rounded-lg p-6 card-shadow space-y-4">
@@ -228,7 +227,7 @@ export default function OwnerExpensesPage() {
               <option value="Energiya">Energiya</option>
               <option value="Logistika">Logistika</option>
               <option value="Texnik">Texnik</option>
-              <option value="Ish haqi">Ish haqi</option>
+              <option value="Boshqa">Boshqa</option>
             </select>
           </div>
           <div className="flex items-end">
@@ -271,7 +270,7 @@ export default function OwnerExpensesPage() {
           searchableFields={["id", "title", "category", "department"]}
           renderCell={(row, col) => {
             if (col.key === "amount") {
-              return currencyFormatter.format(row[col.key])
+              return `${currencyFormatter.format(row[col.key])} so'm`
             }
             return row[col.key]
           }}
@@ -313,20 +312,13 @@ export default function OwnerExpensesPage() {
             setIsSubmitting(true)
             setSubmitError(null)
 
-            if (newExpense.category === "Ish haqi" && !newExpense.employeeName) {
-              setEmployeeError("Xodim majburiy")
-              setIsSubmitting(false)
-              return
-            }
-
             try {
               const payload = {
                 title: newExpense.title,
                 category: newExpense.category,
                 department: newExpense.department,
-                employeeName: newExpense.category === "Ish haqi" ? newExpense.employeeName : undefined,
                 amount: Number(newExpense.amount) || 0,
-                currency: "USD",
+                currency: "UZS",
                 date: newExpense.date,
                 status: newExpense.status,
               }
@@ -351,7 +343,11 @@ export default function OwnerExpensesPage() {
               if (err instanceof ApiError) {
                 const backendMessage =
                   (err.data && (err.data as any).message) || err.message || "Yangi rasxodni saqlashda xatolik yuz berdi"
-                setSubmitError(backendMessage)
+                if (err.status === 400 && err.data && (err.data as any).code === "VALIDATION_EXCEPTION") {
+                  setSubmitError("Ish haqi faqat ishchilar oyligi sahifasi orqali kiritiladi")
+                } else {
+                  setSubmitError(backendMessage)
+                }
               } else {
                 setSubmitError("Yangi rasxodni saqlashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
               }
@@ -381,7 +377,7 @@ export default function OwnerExpensesPage() {
                 setNewExpense((prev) => ({
                   ...prev,
                   category,
-                  employeeName: category === "Ish haqi" ? prev.employeeName : "",
+                  employeeName: "",
                 }))
                 setEmployeeError(null)
               }}
@@ -391,43 +387,11 @@ export default function OwnerExpensesPage() {
               <option value="Energiya">Energiya</option>
               <option value="Logistika">Logistika</option>
               <option value="Texnik">Texnik</option>
-              <option value="Ish haqi">Ish haqi</option>
               <option value="Boshqa">Boshqa</option>
             </select>
           </div>
-          {newExpense.category === "Ish haqi" && (
-            <div>
-              <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Xodim</label>
-              <select
-                value={newExpense.employeeName}
-                onChange={(e) => {
-                  const employeeName = e.target.value
-                  setEmployeeError(null)
-                  const selected = employees.find((emp) => emp.fullName === employeeName)
-                  setNewExpense((prev) => ({
-                    ...prev,
-                    employeeName,
-                    department: selected?.department || prev.department,
-                  }))
-                }}
-                className="w-full sm-select"
-                required
-              >
-                <option value="" disabled>
-                  Xodim tanlang
-                </option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.fullName}>
-                    {emp.fullName}
-                  </option>
-                ))}
-              </select>
-              {employeeError && <p className="mt-1 text-xs text-red-600">{employeeError}</p>}
-              {employeesError && <p className="mt-1 text-xs text-red-600">{employeesError}</p>}
-            </div>
-          )}
           <div>
-            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Miqdor ($)</label>
+            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Miqdor (so'm)</label>
             <input
               type="number"
               value={newExpense.amount}

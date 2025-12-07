@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function TechnicalLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -20,6 +21,19 @@ export default function TechnicalLayout({ children }: { children: React.ReactNod
 
   if (!isAuthed) return null
 
-  return <main className="min-h-screen p-6 bg-[#F8FAFC] flex items-start justify-center">{children}</main>
+  return (
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-6">
+      <header className="mb-4 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-muted-foreground">Texnik mas'ul</p>
+          <h1 className="text-xl font-bold text-foreground">Technical Dashboard</h1>
+        </div>
+        <ThemeToggle />
+      </header>
+      <main className="flex items-start justify-center">
+        {children}
+      </main>
+    </div>
+  )
 }
 

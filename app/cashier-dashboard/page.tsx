@@ -38,9 +38,13 @@ const UZBEK_CONTENT = {
   fuelExpenses: "Solyarka Rasxodlari",
   transportExpenses: "Yo'l Rasxodlari",
   otherExpenses: "Boshqa Rasxodlar",
+  summaryTotalSalary: "Jami ish haqi",
+  summaryTotalAdvances: "Jami avanslar",
+  summaryTotalGeneralExpenses: "Jami umumiy rasxodlar",
+  summaryTotalAllCosts: "Umumiy xarajatlar",
   materialType: "Material Turi",
   weight: "Og'irligi (tonna)",
-  pricePerTon: "Bir Tonnaga Narx ($)",
+  pricePerTon: "Bir tonnaga narx (so'm)",
   clientName: "Truck nomeri",
   paymentType: "To'lov Turi",
   cash: "Naqd Pul",
@@ -97,12 +101,17 @@ export default function CashierDashboard() {
   const [showExpenseModal, setShowExpenseModal] = useState(false)
   const [showExpenseTable, setShowExpenseTable] = useState(false)
   const [selectedExpenseFilter, setSelectedExpenseFilter] = useState("all")
-  const [newExpenseType, setNewExpenseType] = useState(UZBEK_CONTENT.employeeSalary)
+  const [newExpenseType, setNewExpenseType] = useState(UZBEK_CONTENT.other)
   const [newExpenseEmployee, setNewExpenseEmployee] = useState("")
   const [employees, setEmployees] = useState<CashierEmployeeSummary[]>([])
   const [allExpenses, setAllExpenses] = useState<CashierExpenseSummary[]>([])
   const [dashboardError, setDashboardError] = useState<string | null>(null)
   const [isDashboardLoading, setIsDashboardLoading] = useState(false)
+
+  const totalSalary = employees.reduce((sum, e) => sum + (e.salary || 0), 0)
+  const totalSalaryAdvances = employees.reduce((sum, e) => sum + (e.paidAdvance || 0), 0)
+  const totalGeneralExpenses = allExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0)
+  const totalAllCosts = totalSalary + totalGeneralExpenses
 
   // New sale form state
   const [newClient, setNewClient] = useState("")
@@ -177,6 +186,26 @@ export default function CashierDashboard() {
         <p className="text-sm text-slate-500 mt-1">{UZBEK_CONTENT.financialOverview}</p>
       </div>
 
+      {/* KPI cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-2xl p-4 card-shadow-lg border border-slate-100">
+          <p className="text-xs text-slate-500 mb-1">{UZBEK_CONTENT.summaryTotalSalary}</p>
+          <p className="text-2xl font-semibold text-slate-900">{totalSalary.toLocaleString("uz-UZ")} so'm</p>
+        </div>
+        <div className="bg-white rounded-2xl p-4 card-shadow-lg border border-slate-100">
+          <p className="text-xs text-slate-500 mb-1">{UZBEK_CONTENT.summaryTotalAdvances}</p>
+          <p className="text-2xl font-semibold text-amber-600">{totalSalaryAdvances.toLocaleString("uz-UZ")} so'm</p>
+        </div>
+        <div className="bg-white rounded-2xl p-4 card-shadow-lg border border-slate-100">
+          <p className="text-xs text-slate-500 mb-1">{UZBEK_CONTENT.summaryTotalGeneralExpenses}</p>
+          <p className="text-2xl font-semibold text-rose-600">{totalGeneralExpenses.toLocaleString("uz-UZ")} so'm</p>
+        </div>
+        <div className="bg-white rounded-2xl p-4 card-shadow-lg border border-slate-100">
+          <p className="text-xs text-slate-500 mb-1">{UZBEK_CONTENT.summaryTotalAllCosts}</p>
+          <p className="text-2xl font-semibold text-blue-600">{totalAllCosts.toLocaleString("uz-UZ")} so'm</p>
+        </div>
+      </div>
+
       {/* Employees & Expenses Overview */}
       {/* Sales Table (dashboard) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -197,9 +226,9 @@ export default function CashierDashboard() {
                 {employees.map((emp, index) => (
                   <tr key={index} className="border-b border-slate-100 hover:bg-slate-50">
                     <td className="px-3 py-3 text-slate-900 font-medium">{emp.name}</td>
-                    <td className="px-3 py-3 text-slate-700">{emp.salary} $</td>
-                    <td className="px-3 py-3 text-slate-700">{emp.paidAdvance} $</td>
-                    <td className="px-3 py-3 font-semibold text-blue-600">{emp.totalExpense} $</td>
+                    <td className="px-3 py-3 text-slate-700">{emp.salary.toLocaleString("uz-UZ")} so'm</td>
+                    <td className="px-3 py-3 text-slate-700">{emp.paidAdvance.toLocaleString("uz-UZ")} so'm</td>
+                    <td className="px-3 py-3 font-semibold text-blue-600">{emp.totalExpense.toLocaleString("uz-UZ")} so'm</td>
                   </tr>
                 ))}
               </tbody>
@@ -220,7 +249,7 @@ export default function CashierDashboard() {
                   <p className="font-medium text-slate-900">{emp.name}</p>
                   <p className="text-sm text-slate-500">{emp.date}</p>
                 </div>
-                <span className="font-semibold text-amber-600">{emp.paidAdvance} $</span>
+                <span className="font-semibold text-amber-600">{emp.paidAdvance.toLocaleString("uz-UZ")} so'm</span>
               </div>
             ))}
           </div>
@@ -296,7 +325,7 @@ export default function CashierDashboard() {
                     </td>
                     <td className="px-4 py-3 text-slate-900 font-medium">{exp.employee}</td>
                     <td className="px-4 py-3 text-slate-600">{exp.description}</td>
-                    <td className="px-4 py-3 text-right text-slate-900 font-semibold">{exp.amount} $</td>
+                    <td className="px-4 py-3 text-right text-slate-900 font-semibold">{exp.amount.toLocaleString("uz-UZ")} so'm</td>
                   </tr>
                 ))}
             </tbody>
@@ -422,37 +451,15 @@ export default function CashierDashboard() {
               onChange={(e) => {
                 const value = e.target.value
                 setNewExpenseType(value)
-                if (value === UZBEK_CONTENT.employeeSalary) {
-                  setNewExpenseEmployee(employees[0]?.name ?? "")
-                } else {
-                  setNewExpenseEmployee("")
-                }
+                setNewExpenseEmployee("")
               }}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
             >
-              <option value={UZBEK_CONTENT.employeeSalary}>{UZBEK_CONTENT.employeeSalary}</option>
-              <option value={UZBEK_CONTENT.avans}>{UZBEK_CONTENT.avans}</option>
               <option value={UZBEK_CONTENT.fuel}>{UZBEK_CONTENT.fuel}</option>
               <option value={UZBEK_CONTENT.road}>{UZBEK_CONTENT.road}</option>
               <option value={UZBEK_CONTENT.other}>{UZBEK_CONTENT.other}</option>
             </select>
           </div>
-          {newExpenseType === UZBEK_CONTENT.employeeSalary && (
-            <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">{UZBEK_CONTENT.employeeName}</label>
-              <select
-                value={newExpenseEmployee}
-                onChange={(e) => setNewExpenseEmployee(e.target.value)}
-                className="w-full sm-select"
-              >
-                {employees.map((emp) => (
-                  <option key={emp.name} value={emp.name}>
-                    {emp.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">{UZBEK_CONTENT.amount}</label>
             <input

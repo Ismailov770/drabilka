@@ -40,6 +40,36 @@
   --sidebar-ring: oklch(0.44 0.22 260);
 }
 
+/* Dark mode overrides for legacy Tailwind slate utility classes */
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-\[\#0F172A\] {
+  color: var(--foreground);
+}
+
+.dark .text-slate-700,
+.dark .text-slate-600,
+.dark .text-slate-500,
+.dark .text-slate-400,
+.dark .text-\[\#64748B\] {
+  color: var(--muted-foreground);
+}
+
+.dark .bg-white {
+  background-color: var(--card);
+}
+
+.dark .bg-slate-50,
+.dark .bg-slate-100 {
+  background-color: var(--muted);
+}
+
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300 {
+  border-color: var(--border);
+}
+
 .dark {
   /* Dark mode theme for SimentMaker */
   --background: oklch(0.06 0 0);
@@ -194,5 +224,10 @@
 
 /* Premium select styling */
 .sm-select {
-  @apply px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent;
+  @apply px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent;
+}
+
+/* Dark overrides for legacy hardcoded borders used in inputs/selects */
+.dark .border-\[\#E2E8F0\] {
+  border-color: var(--border);
 }

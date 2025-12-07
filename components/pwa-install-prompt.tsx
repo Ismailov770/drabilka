@@ -10,9 +10,18 @@ interface BeforeInstallPromptEvent extends Event {
 export function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [visible, setVisible] = useState(false)
+  const [isIos, setIsIos] = useState(false)
 
   useEffect(() => {
     if (typeof window === "undefined") return
+
+    const userAgent = window.navigator.userAgent.toLowerCase()
+    const isIosDevice = /iphone|ipad|ipod/.test(userAgent)
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true
+
+    setIsIos(isIosDevice)
 
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault()
@@ -26,13 +35,20 @@ export function PwaInstallPrompt() {
       navigator.serviceWorker.register("/sw.js").catch(() => {})
     }
 
+    if (isIosDevice && !isStandalone) {
+      setVisible(true)
+    }
+
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
     }
   }, [])
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return
+    if (!deferredPrompt) {
+      setVisible(false)
+      return
+    }
     await deferredPrompt.prompt()
     await deferredPrompt.userChoice
     setVisible(false)
@@ -47,7 +63,9 @@ export function PwaInstallPrompt() {
         <div className="flex-1">
           <div className="text-sm font-semibold text-slate-900">DrabilkaUz ilovasini o'rnatish</div>
           <div className="text-xs text-slate-500 mt-1">
-            Tezroq kirish uchun ilovani qurilmangizga PWA sifatida o'rnating.
+            {isIos
+              ? "iOS qurilmalarida ilovani o'rnatish uchun brauzer menyusidan \"Add to Home Screen\" (Bosh ekranga qo'shish) ni tanlang."
+              : "Tezroq kirish uchun ilovani qurilmangizga PWA sifatida o'rnating."}
           </div>
         </div>
         <button

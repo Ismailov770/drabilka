@@ -103,7 +103,7 @@ export function SidebarNav({ role, items, onNavigate }: SidebarNavProps) {
           onClick={handleLogout}
           className="w-full px-4 py-2 bg-[#EF4444] text-white rounded-lg hover:bg-[#DC2626] transition-colors font-medium"
         >
-          Logout
+          Chiqish
         </button>
       </div>
     </div>

@@ -32,7 +32,7 @@ export function printSaleReceipt(sale: Record<string, any>) {
       <body>
         <div class="receipt">
           <div class="header">
-            <h2>SimentMaker - Receipt</h2>
+            <h2>DrabilkaUz - Receipt</h2>
             <div>Sale: ${sale.id}</div>
             <div>${new Date(sale.date || Date.now()).toLocaleString()}</div>
           </div>

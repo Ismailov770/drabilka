@@ -4,9 +4,10 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ApiError, post } from "@/styles/lib/api"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 const UZBEK_CONTENT = {
-  title: "SimentMaker",
+  title: "DrabilkaUz",
   subtitle: "Semento Zavodi Boshqaruv Tizimi",
   selectRole: "Rolni Tanlang",
   loginLabel: "Login",
@@ -21,9 +22,19 @@ const UZBEK_CONTENT = {
   },
 }
 
+function inferRoleFromUsername(username: string): "owner" | "cashier" | "driver" | "technical" | null {
+  const value = username.trim().toLowerCase()
+
+  if (value.startsWith("owner")) return "owner"
+  if (value.startsWith("cashier")) return "cashier"
+  if (value.startsWith("driver")) return "driver"
+  if (value.startsWith("technical")) return "technical"
+
+  return null
+}
+
 export default function LoginPage() {
   const router = useRouter()
-  const [role, setRole] = useState<string>("")
   const [username, setUsername] = useState<string>("")
   const [password, setPassword] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
@@ -31,7 +42,13 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!role || !username || !password) {
+    if (!username || !password) {
+      return
+    }
+
+    const inferredRole = inferRoleFromUsername(username)
+    if (!inferredRole) {
+      setError("Bu login uchun rol aniqlanmadi. Iltimos, administrator bilan bog'laning.")
       return
     }
 
@@ -51,7 +68,7 @@ export default function LoginPage() {
       }>("/auth/login", {
         username,
         password,
-        role,
+        role: inferredRole,
       })
 
       if (typeof window !== "undefined") {
@@ -73,17 +90,12 @@ export default function LoginPage() {
       setIsLoading(false)
     }
   }
-
-  const roleOptions = [
-    { id: "owner", label: UZBEK_CONTENT.roles.owner, icon: "👔" },
-    { id: "cashier", label: UZBEK_CONTENT.roles.cashier, icon: "💰" },
-    { id: "driver", label: UZBEK_CONTENT.roles.driver, icon: "🚚" },
-    { id: "technical", label: UZBEK_CONTENT.roles.technical, icon: "⚙️" },
-  ]
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        <div className="flex items-center justify-end mb-4">
+          <ThemeToggle />
+        </div>
         {/* Card */}
         <div className="bg-white rounded-xl shadow-lg p-8 border border-slate-200">
           {/* Header */}
@@ -97,75 +109,42 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-6">
             {/* Role Selection */}
-            {!role && (
-              <div>
-                <label className="block text-sm font-semibold text-slate-900 mb-3">{UZBEK_CONTENT.selectRole}</label>
-                <div className="space-y-2">
-                  {roleOptions.map((r) => (
-                    <label
-                      key={r.id}
-                      className={`flex items-center p-3 rounded-lg cursor-pointer transition-all border-2 ${
-                        role === r.id
-                          ? "border-blue-600 bg-blue-50"
-                          : "border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="role"
-                        value={r.id}
-                        checked={role === r.id}
-                        onChange={(e) => setRole(e.target.value)}
-                        className="w-4 h-4 text-blue-600"
-                      />
-                      <span className="ml-3 text-lg">{r.icon}</span>
-                      <span className="ml-2 font-medium text-slate-900">{r.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Login */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-900 mb-2">{UZBEK_CONTENT.loginLabel}</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
+                placeholder="owner01 yoki login"
+              />
+            </div>
 
-            {role && (
-              <>
-                {/* Login */}
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900 mb-2">{UZBEK_CONTENT.loginLabel}</label>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
-                    placeholder="owner01 yoki login"
-                  />
-                </div>
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-900 mb-2">{UZBEK_CONTENT.password}</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
+                placeholder="••••••••"
+              />
+            </div>
 
-                {/* Password */}
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900 mb-2">{UZBEK_CONTENT.password}</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
-                    placeholder="••••••••"
-                  />
-                </div>
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={!role || !username || !password || isLoading}
-                  className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                >
-                  {isLoading ? "Yuklanmoqda..." : UZBEK_CONTENT.login}
-                </button>
-                {error && (
-                  <p className="mt-3 text-sm text-red-600">
-                    {error}
-                  </p>
-                )}
-              </>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={!username || !password || isLoading}
+              className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            >
+              {isLoading ? "Yuklanmoqda..." : UZBEK_CONTENT.login}
+            </button>
+            {error && (
+              <p className="mt-3 text-sm text-red-600">
+                {error}
+              </p>
             )}
           </form>
 

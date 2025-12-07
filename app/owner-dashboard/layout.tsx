@@ -5,6 +5,7 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { SidebarNav } from "@/components/sidebar-nav"
+import { ThemeToggle } from "@/components/theme-toggle"
 import {
   LayoutDashboard,
   Factory,
@@ -38,7 +39,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
   if (!isAuthed) return null
 
   const navItems = [
-    { label: "Dashboard", href: "/owner-dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
+    { label: "Boshqaruv paneli", href: "/owner-dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
     {
       label: "Mahsulotlar",
       icon: <Factory className="w-5 h-5" />,
@@ -58,7 +59,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
       href: "#",
       children: [
         { label: "Umumiy Rasxodlar", href: "/owner-dashboard/expenses", icon: <FileText className="w-4 h-4" /> },
-        { label: "Qarzlar / Debts", href: "/owner-dashboard/debts", icon: <CreditCard className="w-4 h-4" /> },
+        { label: "Qarzlar", href: "/owner-dashboard/debts", icon: <CreditCard className="w-4 h-4" /> },
         { label: "Ishchilar Oyligi", href: "/owner-dashboard/payroll", icon: <FileText className="w-4 h-4" /> },
       ],
     },
@@ -79,22 +80,25 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
   ]
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Mobile top bar */}
-      <header className="md:hidden flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white sticky top-0 z-30">
+      <header className="md:hidden flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white dark:bg-slate-900/70 sticky top-0 z-30 backdrop-blur">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-lg bg-[#2563EB] text-white flex items-center justify-center text-sm font-bold">
             S
           </div>
-          <span className="text-sm font-semibold text-slate-900">SimentMaker · Owner</span>
+          <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">DrabilkaUz · Zavod egasi</span>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsMobileNavOpen((prev) => !prev)}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            type="button"
+            onClick={() => setIsMobileNavOpen((prev) => !prev)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        </div>
       </header>
 
       {/* Desktop sidebar */}
@@ -115,7 +119,13 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
         </div>
       )}
 
-      <main className="flex-1 p-4 md:p-6 md:ml-64">{children}</main>
+      <main className="flex-1 p-4 md:p-6 md:ml-64">
+        <div className="hidden md:flex items-center justify-between mb-4">
+          <div />
+          <ThemeToggle />
+        </div>
+        {children}
+      </main>
     </div>
   )
 }

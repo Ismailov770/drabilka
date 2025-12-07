@@ -39,6 +39,15 @@ type PayrollFiltersResponse = {
   statuses?: string[]
 }
 
+type PayrollPayment = {
+  id: string
+  amount: number
+  paymentDate: string
+  notes?: string | null
+  createdBy: string
+  createdAt: string
+}
+
 function mapPayrollDtoToRecord(item: any): PayrollRecord {
   const id = item.id ?? item.payrollId ?? ""
 
@@ -90,14 +99,26 @@ const columns = [
   { key: "employee", label: "Xodim", sortable: true },
   { key: "role", label: "Lavozim", sortable: false },
   { key: "month", label: "Oyi", sortable: true },
-  { key: "total", label: "Umumiy oyligi ($)", sortable: true },
-  { key: "advance", label: "Olgan avansi ($)", sortable: true },
-  { key: "remaining", label: "Qoldiq ($)", sortable: true },
+  { key: "baseSalary", label: "Asosiy oylik (so'm)", sortable: true },
+  { key: "overtime", label: "Qo'shimcha (so'm)", sortable: true },
+  { key: "deductions", label: "Ushlab qolinishi (so'm)", sortable: true },
+  { key: "total", label: "Umumiy oyligi (so'm)", sortable: true },
+  { key: "advance", label: "Olgan avansi (so'm)", sortable: true },
+  { key: "remaining", label: "Qoldiq (so'm)", sortable: true },
   { key: "status", label: "Status", sortable: true },
   { key: "payoutDate", label: "To'lov sanasi", sortable: true },
 ]
 
-const currencyFormatter = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
+const currencyFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 })
+
+const getRoleLabel = (role: string) => {
+  const normalized = role.toLowerCase()
+  if (normalized === "owner") return "Egasi"
+  if (normalized === "cashier") return "Kassir"
+  if (normalized === "driver") return "Haydovchi"
+  if (normalized === "technical") return "Texnik xodim"
+  return role
+}
 
 const getCurrentMonthLabel = () => {
   const now = new Date()
@@ -125,7 +146,7 @@ export default function OwnerPayrollPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<PayrollRecord | null>(null)
   const [paymentData, setPaymentData] = useState({
     amount: "",
-    paymentDate: new Date().toISOString().split("T")[0],
+    paymentDate: "",
     notes: "",
   })
   const [newEmployee, setNewEmployee] = useState({
@@ -133,7 +154,7 @@ export default function OwnerPayrollPage() {
     role: "",
     department: "",
     baseSalary: "",
-    hiredAt: new Date().toISOString().split("T")[0],
+    hiredAt: "",
     username: "",
     password: "",
   })
@@ -150,45 +171,46 @@ export default function OwnerPayrollPage() {
   const [newPassword, setNewPassword] = useState("")
   const [changePasswordError, setChangePasswordError] = useState<string | null>(null)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [paymentsByPayrollId, setPaymentsByPayrollId] = useState<Record<string, PayrollPayment[]>>({})
+  const [openPaymentsPayrollId, setOpenPaymentsPayrollId] = useState<string | null>(null)
+  const [isPaymentsLoading, setIsPaymentsLoading] = useState(false)
+  const [paymentsError, setPaymentsError] = useState<string | null>(null)
+
+  const fetchPayroll = async (override?: { dateFrom?: string; dateTo?: string; status?: string }) => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const effectiveFilters = {
+        ...filters,
+        ...override,
+      }
+
+      const response = await get<any[] | { items?: any[] }>("/payroll", {
+        params: {
+          dateFrom: effectiveFilters.dateFrom || undefined,
+          dateTo: effectiveFilters.dateTo || undefined,
+          status: effectiveFilters.status === "all" ? undefined : effectiveFilters.status,
+        },
+      })
+
+      const items = Array.isArray(response) ? response : response.items ?? []
+      setRecords(items.map((item) => mapPayrollDtoToRecord(item)))
+    } catch (err: any) {
+      if (err instanceof ApiError) {
+        const backendMessage =
+          (err.data && (err.data as any).message) || err.message || "Oylik yozuvlarini yuklashda xatolik yuz berdi"
+        setError(backendMessage)
+      } else {
+        setError("Oylik yozuvlarini yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    let cancelled = false
-
-    const fetchPayroll = async () => {
-      setIsLoading(true)
-      setError(null)
-      try {
-        const response = await get<any[] | { items?: any[] }>("/payroll", {
-          params: {
-            dateFrom: filters.dateFrom || undefined,
-            dateTo: filters.dateTo || undefined,
-            status: filters.status === "all" ? undefined : filters.status,
-          },
-        })
-        if (cancelled) return
-        const items = Array.isArray(response) ? response : response.items ?? []
-        setRecords(items.map((item) => mapPayrollDtoToRecord(item)))
-      } catch (err: any) {
-        if (cancelled) return
-        if (err instanceof ApiError) {
-          const backendMessage =
-            (err.data && (err.data as any).message) || err.message || "Oylik yozuvlarini yuklashda xatolik yuz berdi"
-          setError(backendMessage)
-        } else {
-          setError("Oylik yozuvlarini yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
-        }
-      }
-    }
-
     fetchPayroll()
-
-    return () => {
-      cancelled = true
-    }
   }, [filters.dateFrom, filters.dateTo, filters.status])
 
   useEffect(() => {
@@ -239,9 +261,20 @@ export default function OwnerPayrollPage() {
   }, [])
 
   const withinRange = (dateStr: string) => {
+    const hasFrom = !!filters.dateFrom
+    const hasTo = !!filters.dateTo
+
+    if (!hasFrom && !hasTo) {
+      return true
+    }
+
+    if (!dateStr) {
+      return false
+    }
+
     const current = new Date(dateStr).getTime()
-    const from = filters.dateFrom ? new Date(filters.dateFrom).getTime() : undefined
-    const to = filters.dateTo ? new Date(filters.dateTo).getTime() : undefined
+    const from = hasFrom ? new Date(filters.dateFrom).getTime() : undefined
+    const to = hasTo ? new Date(filters.dateTo).getTime() : undefined
     const afterFrom = typeof from === "number" ? current >= from : true
     const beforeTo = typeof to === "number" ? current <= to : true
     return afterFrom && beforeTo
@@ -268,7 +301,10 @@ export default function OwnerPayrollPage() {
   const avgSalary = totals.count ? totals.total / totals.count : 0
 
   const roleOptions = useMemo(
-    () => employeeRoles.map((role) => ({ value: role, label: role })),
+    () =>
+      employeeRoles
+        .filter((role) => role.toLowerCase() !== "owner")
+        .map((role) => ({ value: role, label: getRoleLabel(role) })),
     [employeeRoles],
   )
 
@@ -288,12 +324,98 @@ export default function OwnerPayrollPage() {
     [employees],
   )
 
+  const handleOpenPaymentsHistory = async (record: PayrollRecord) => {
+    const payrollId = record.id
+    setPaymentsError(null)
+    setOpenPaymentsPayrollId(payrollId)
+
+    if (paymentsByPayrollId[payrollId]) {
+      return
+    }
+
+    setIsPaymentsLoading(true)
+    try {
+      const response = await get<PayrollPayment[] | { items?: PayrollPayment[] }>(`/payroll/${payrollId}/payments`)
+      const items = Array.isArray(response) ? response : response.items ?? []
+      setPaymentsByPayrollId((prev) => ({
+        ...prev,
+        [payrollId]: items,
+      }))
+    } catch (err: any) {
+      if (err instanceof ApiError) {
+        const backendMessage =
+          (err.data && (err.data as any).message) ||
+          err.message ||
+          "To'lovlar tarixini yuklashda xatolik yuz berdi"
+        setPaymentsError(backendMessage)
+      } else {
+        setPaymentsError("To'lovlar tarixini yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+      }
+    } finally {
+      setIsPaymentsLoading(false)
+    }
+  }
+
+  const handleCreatePayrollForEmployee = async (row: any) => {
+    const emp = employees.find((e) => e.id === row.id)
+    if (!emp) return
+
+    try {
+      const currentMonthLabel = getCurrentMonthLabel()
+
+      const alreadyExistsForCurrentMonth = records.some(
+        (r) => r.employee === emp.fullName && r.month === currentMonthLabel,
+      )
+
+      if (alreadyExistsForCurrentMonth) {
+        setError("Bu xodim uchun joriy oyda allaqachon oylik yozuvi mavjud")
+        return
+      }
+
+      const now = new Date()
+      const year = now.getFullYear()
+      const monthNumber = now.getMonth() + 1
+
+      const payload = {
+        employeeId: emp.id,
+        year,
+        month: monthNumber,
+        monthLabel: getCurrentMonthLabel(),
+        baseSalary: emp.baseSalary,
+        overtime: 0,
+        deductions: 0,
+        advance: 0,
+      }
+
+      const created = await post<any>("/payroll", payload)
+      const record = mapPayrollDtoToRecord(created)
+
+      setRecords((prev) => {
+        const index = prev.findIndex((r) => r.id === record.id)
+        if (index !== -1) {
+          const copy = [...prev]
+          copy[index] = record
+          return copy
+        }
+        return [...prev, record]
+      })
+    } catch (err: any) {
+      if (err instanceof ApiError) {
+        const backendMessage =
+          (err.data && (err.data as any).message) || err.message || "Oylik yozuvini yaratishda xatolik yuz berdi"
+        setError(backendMessage)
+      } else {
+        setError("Oylik yozuvini yaratishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+      }
+    }
+  }
+
   const employeeColumns = [
     { key: "order", label: "T/R", sortable: false },
     { key: "fullName", label: "Xodim", sortable: true },
     { key: "role", label: "Lavozim", sortable: true },
     { key: "department", label: "Bo'lim", sortable: true },
-    { key: "baseSalary", label: "Asosiy oylik ($)", sortable: true },
+    { key: "baseSalary", label: "Asosiy oylik (so'm)", sortable: true },
     { key: "username", label: "Login", sortable: true },
     { key: "createdBy", label: "Kim yaratgan", sortable: true },
   ]
@@ -301,11 +423,11 @@ export default function OwnerPayrollPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-[#0F172A]">Ishchilar oyligi</h1>
-        <p className="text-[#64748B] mt-1">Bo'limlar kesimidagi to'lovlar holati</p>
+        <h1 className="text-3xl font-bold text-foreground">Ishchilar oyligi</h1>
+        <p className="text-muted-foreground mt-1">Bo'limlar kesimidagi to'lovlar holati</p>
       </div>
 
-      <div className="bg-white rounded-lg p-6 card-shadow space-y-4">
+      <div className="bg-card rounded-lg p-6 card-shadow space-y-4 border border-border">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Boshlanish sanasi</label>
@@ -354,9 +476,9 @@ export default function OwnerPayrollPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg p-6 card-shadow">
+      <div className="bg-card rounded-lg p-6 card-shadow border border-border">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-[#0F172A]">Ish haqi ro'yxati</h2>
+          <h2 className="text-lg font-semibold text-foreground">Ish haqi ro'yxati</h2>
           <button
             onClick={() => setIsAddEmployeeModalOpen(true)}
             className="px-4 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-[#1D4ED8] transition-colors font-semibold flex items-center gap-2"
@@ -371,8 +493,14 @@ export default function OwnerPayrollPage() {
           data={filteredRecords}
           searchableFields={["id", "employee", "department", "role", "status"]}
           renderCell={(row, col) => {
-            if (col.key === "total" || col.key === "advance") {
-              return currencyFormatter.format(row[col.key])
+            if (
+              col.key === "total" ||
+              col.key === "advance" ||
+              col.key === "baseSalary" ||
+              col.key === "overtime" ||
+              col.key === "deductions"
+            ) {
+              return `${currencyFormatter.format(row[col.key])} so'm`
             }
             if (col.key === "remaining") {
               const remaining = row[col.key]
@@ -380,29 +508,45 @@ export default function OwnerPayrollPage() {
               return (
                 <span className={isNegative ? "text-red-600 font-semibold" : ""}>
                   {isNegative ? "-" : ""}
-                  {currencyFormatter.format(Math.abs(remaining))}
+                  {currencyFormatter.format(Math.abs(remaining))} so'm
                 </span>
               )
             }
             return row[col.key]
           }}
-          actions={(row: any) => (
-            <button
-              onClick={() => {
-                setPayError(null)
-                setSelectedEmployee(row as PayrollRecord)
-                setPaymentData({
-                  amount: row.remaining > 0 ? row.remaining.toString() : "",
-                  paymentDate: new Date().toISOString().split("T")[0],
-                  notes: "",
-                })
-                setIsPaySalaryModalOpen(true)
-              }}
-              className="px-3 py-1 bg-[#10B981] text-white rounded-lg hover:bg-[#059669] transition-colors text-sm font-semibold"
-            >
-              Oylik berish
-            </button>
-          )}
+          actions={(row: any) => {
+            const record = row as PayrollRecord
+
+            return (
+              <div className="flex items-center gap-2">
+                {record.remaining > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPayError(null)
+                      setSelectedEmployee(record)
+                      setPaymentData({
+                        amount: record.remaining > 0 ? record.remaining.toString() : "",
+                        paymentDate: "",
+                        notes: "",
+                      })
+                      setIsPaySalaryModalOpen(true)
+                    }}
+                    className="px-3 py-1 bg-[#10B981] text-white rounded-lg hover:bg-[#059669] transition-colors text-sm font-semibold"
+                  >
+                    Oylik berish
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleOpenPaymentsHistory(record)}
+                  className="px-3 py-1 border border-[#E2E8F0] text-[#0F172A] rounded-lg hover:bg-[#F1F5F9] transition-colors text-sm font-semibold"
+                >
+                  To'lovlar tarixi
+                </button>
+              </div>
+            )
+          }}
           footerTotals={filteredRecords.reduce(
             (acc, record) => {
               acc.total += record.total
@@ -416,9 +560,9 @@ export default function OwnerPayrollPage() {
         />
       </div>
 
-      <div className="bg-white rounded-lg p-6 card-shadow">
+      <div className="bg-card rounded-lg p-6 card-shadow border border-border">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-[#0F172A]">Xodimlar ro'yxati</h2>
+          <h2 className="text-lg font-semibold text-foreground">Xodimlar ro'yxati</h2>
         </div>
         <DataTable
           columns={employeeColumns}
@@ -426,7 +570,7 @@ export default function OwnerPayrollPage() {
           searchableFields={["fullName", "role", "department", "username", "createdBy"]}
           renderCell={(row, col) => {
             if (col.key === "baseSalary") {
-              return currencyFormatter.format(row.baseSalary)
+              return `${currencyFormatter.format(row.baseSalary)} so'm`
             }
             return row[col.key]
           }}
@@ -456,7 +600,7 @@ export default function OwnerPayrollPage() {
           setSelectedEmployee(null)
           setPaymentData({
             amount: "",
-            paymentDate: new Date().toISOString().split("T")[0],
+            paymentDate: "",
             notes: "",
           })
           setPayError(null)
@@ -469,6 +613,7 @@ export default function OwnerPayrollPage() {
             onSubmit={async (e) => {
               e.preventDefault()
               if (!selectedEmployee) return
+
               const amount = Number(paymentData.amount)
               setIsPaying(true)
               setPayError(null)
@@ -480,19 +625,15 @@ export default function OwnerPayrollPage() {
                   notes: paymentData.notes || undefined,
                 }
 
-                const response = await post<PayrollRecord | { record?: PayrollRecord }>(
-                  `/payroll/${selectedEmployee.id}/pay`,
-                  body,
-                )
-                const updated = (response as any).record ?? response
+                await post<PayrollRecord | { record?: PayrollRecord }>(`/payroll/${selectedEmployee.id}/pay`, body)
 
-                setRecords((prev) => prev.map((r) => (r.id === updated.id ? (updated as PayrollRecord) : r)))
+                await fetchPayroll()
 
                 setIsPaySalaryModalOpen(false)
                 setSelectedEmployee(null)
                 setPaymentData({
                   amount: "",
-                  paymentDate: new Date().toISOString().split("T")[0],
+                  paymentDate: "",
                   notes: "",
                 })
               } catch (err: any) {
@@ -522,20 +663,20 @@ export default function OwnerPayrollPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-[#64748B]">Umumiy oyligi:</span>
-                <span className="text-sm font-semibold text-[#0F172A]">{currencyFormatter.format(selectedEmployee.total)}</span>
+                <span className="text-sm font-semibold text-[#0F172A]">{currencyFormatter.format(selectedEmployee.total)} so'm</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-[#64748B]">Olgan avansi:</span>
-                <span className="text-sm font-semibold text-[#0F172A]">{currencyFormatter.format(selectedEmployee.advance)}</span>
+                <span className="text-sm font-semibold text-[#0F172A]">{currencyFormatter.format(selectedEmployee.advance)} so'm</span>
               </div>
               <div className="flex justify-between border-t border-[#E2E8F0] pt-2">
                 <span className="text-sm font-semibold text-[#0F172A]">Qoldiq:</span>
-                <span className="text-sm font-semibold text-[#10B981]">{currencyFormatter.format(selectedEmployee.remaining)}</span>
+                <span className="text-sm font-semibold text-[#10B981]">{currencyFormatter.format(selectedEmployee.remaining)} so'm</span>
               </div>
             </div>
 
             <div>
-              <label className="text-sm font-semibold text-[#0F172A] mb-2 block">To'lov miqdori ($)</label>
+              <label className="text-sm font-semibold text-[#0F172A] mb-2 block">To'lov miqdori (so'm)</label>
               <input
                 type="number"
                 value={paymentData.amount}
@@ -547,9 +688,11 @@ export default function OwnerPayrollPage() {
                 required
               />
               <p className="text-xs text-[#64748B] mt-1">
-                Qoldiq: {currencyFormatter.format(selectedEmployee.remaining)}
+                Qoldiq: {currencyFormatter.format(selectedEmployee.remaining)} so'm
                 {selectedEmployee.remaining < 0 && (
-                  <span className="text-red-600 ml-2">(Qoldiqdan ko'p berilgan: {currencyFormatter.format(Math.abs(selectedEmployee.remaining))})</span>
+                  <span className="text-red-600 ml-2">
+                    (Qoldiqdan ko'p berilgan: {currencyFormatter.format(Math.abs(selectedEmployee.remaining))} so'm)
+                  </span>
                 )}
               </p>
             </div>
@@ -593,9 +736,11 @@ export default function OwnerPayrollPage() {
                   setSelectedEmployee(null)
                   setPaymentData({
                     amount: "",
-                    paymentDate: new Date().toISOString().split("T")[0],
+                    paymentDate: "",
                     notes: "",
                   })
+                  setPayError(null)
+                  setIsPaying(false)
                 }}
                 className="flex-1 px-4 py-2 bg-gray-200 text-[#0F172A] rounded-lg hover:bg-gray-300 transition-colors font-semibold"
               >
@@ -603,6 +748,69 @@ export default function OwnerPayrollPage() {
               </button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={!!openPaymentsPayrollId}
+        title="To'lovlar tarixi"
+        onClose={() => {
+          setOpenPaymentsPayrollId(null)
+          setPaymentsError(null)
+          setIsPaymentsLoading(false)
+        }}
+        size="lg"
+      >
+        {openPaymentsPayrollId && (
+          <div className="space-y-4">
+            {paymentsError && <p className="text-sm text-red-600">{paymentsError}</p>}
+            {isPaymentsLoading && !paymentsError && (
+              <p className="text-sm text-muted-foreground">Yuklanmoqda...</p>
+            )}
+            {!isPaymentsLoading &&
+              !paymentsError &&
+              (!paymentsByPayrollId[openPaymentsPayrollId] ||
+                paymentsByPayrollId[openPaymentsPayrollId].length === 0) && (
+                <p className="text-sm text-muted-foreground">To'lovlar tarixi mavjud emas.</p>
+              )}
+            {!isPaymentsLoading &&
+              !paymentsError &&
+              paymentsByPayrollId[openPaymentsPayrollId] &&
+              paymentsByPayrollId[openPaymentsPayrollId].length > 0 && (
+                <div className="border border-[#E2E8F0] rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#F8FAFC] text-left">
+                      <tr>
+                        <th className="px-3 py-2 font-semibold text-[#0F172A]">To'lov sanasi</th>
+                        <th className="px-3 py-2 font-semibold text-[#0F172A]">Miqdori</th>
+                        <th className="px-3 py-2 font-semibold text-[#0F172A]">Izoh</th>
+                        <th className="px-3 py-2 font-semibold text-[#0F172A]">Kim bergan</th>
+                        <th className="px-3 py-2 font-semibold text-[#0F172A]">Yozilgan vaqti</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paymentsByPayrollId[openPaymentsPayrollId].map((payment) => (
+                        <tr key={payment.id} className="border-t border-[#E2E8F0]">
+                          <td className="px-3 py-2 align-top">
+                            {payment.paymentDate ? payment.paymentDate.slice(0, 10) : ""}
+                          </td>
+                          <td className="px-3 py-2 align-top">
+                            {currencyFormatter.format(payment.amount)} so'm
+                          </td>
+                          <td className="px-3 py-2 align-top">
+                            {payment.notes && payment.notes.trim() !== "" ? payment.notes : "-"}
+                          </td>
+                          <td className="px-3 py-2 align-top">{payment.createdBy}</td>
+                          <td className="px-3 py-2 align-top">
+                            {payment.createdAt ? payment.createdAt.replace("T", " ").slice(0, 16) : ""}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+          </div>
         )}
       </Modal>
 
@@ -616,7 +824,7 @@ export default function OwnerPayrollPage() {
             role: "",
             department: "",
             baseSalary: "",
-            hiredAt: new Date().toISOString().split("T")[0],
+            hiredAt: "",
             username: "",
             password: "",
           })
@@ -682,13 +890,19 @@ export default function OwnerPayrollPage() {
 
               setEmployees((prev) => [...prev, created])
 
+              await fetchPayroll({
+                dateFrom: "",
+                dateTo: "",
+                status: "all",
+              })
+
               setIsAddEmployeeModalOpen(false)
               setNewEmployee({
                 fullName: "",
                 role: "",
                 department: "",
                 baseSalary: "",
-                hiredAt: new Date().toISOString().split("T")[0],
+                hiredAt: "",
                 username: "",
                 password: "",
               })
@@ -696,7 +910,14 @@ export default function OwnerPayrollPage() {
               if (err instanceof ApiError) {
                 const backendMessage =
                   (err.data && (err.data as any).message) || err.message || "Yangi ishchini saqlashda xatolik yuz berdi"
-                setAddEmployeeError(backendMessage)
+
+                if (backendMessage && backendMessage.includes("Cannot create OWNER via employee API")) {
+                  setAddEmployeeError(
+                    "Yangi egani (OWNER) yaratib bo'lmaydi. Tizimda faqat bitta OWNER bo'lishi mumkin, iltimos boshqa lavozimni tanlang.",
+                  )
+                } else {
+                  setAddEmployeeError(backendMessage)
+                }
               } else {
                 setAddEmployeeError("Yangi ishchini saqlashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
               }
@@ -747,7 +968,7 @@ export default function OwnerPayrollPage() {
             />
           </div>
           <div>
-            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Asosiy oylik ($)</label>
+            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Asosiy oylik (so'm)</label>
             <input
               type="number"
               value={newEmployee.baseSalary}
@@ -808,7 +1029,7 @@ export default function OwnerPayrollPage() {
                   role: "",
                   department: "",
                   baseSalary: "",
-                  hiredAt: new Date().toISOString().split("T")[0],
+                  hiredAt: "",
                   username: "",
                   password: "",
                 })

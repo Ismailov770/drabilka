@@ -18,11 +18,11 @@ const colorMap = {
 
 export function StatCard({ label, value, icon, trend, color = "blue" }: StatCardProps) {
   return (
-    <div className="bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100 flex flex-col justify-between">
+    <div className="bg-card rounded-2xl p-6 card-shadow-lg border border-border flex flex-col justify-between">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-          <p className="text-3xl md:text-4xl font-semibold text-slate-900">{value}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+          <p className="text-3xl md:text-4xl font-semibold text-foreground">{value}</p>
           {trend && (
             <p className={`text-xs mt-1 md:text-sm ${trend.isPositive ? "text-emerald-500" : "text-rose-500"}`}>
               {trend.isPositive ? "▲" : "▼"} {Math.abs(trend.value)}% from last month

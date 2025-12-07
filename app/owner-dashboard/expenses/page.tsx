@@ -21,7 +21,7 @@ const columns = [
   { key: "title", label: "Tavsif", sortable: false },
   { key: "category", label: "Kategoriya", sortable: true },
   { key: "department", label: "Bo'lim", sortable: true },
-  { key: "amount", label: "Miqdor ($)", sortable: true },
+  { key: "amount", label: "Miqdor (so'm)", sortable: true },
   { key: "date", label: "Sana", sortable: true },
 ]
 
@@ -36,7 +36,7 @@ type Expense = {
   employeeName?: string
 }
 
-const currencyFormatter = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
+const currencyFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 })
 
 type Employee = {
   id: number
@@ -205,7 +205,7 @@ export default function OwnerExpensesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-[#0F172A]">Umumiy rasxodlar</h1>
-        <p className="text-[#64748B] mt-1">Energiya, logistika, texnik xizmat va ish haqi bo'yicha to'liq hisobot</p>
+        <p className="text-[#64748B] mt-1">Energiya, logistika va texnik xizmat bo'yicha to'liq hisobot</p>
       </div>
 
       <div className="bg-white rounded-lg p-6 card-shadow space-y-4">
@@ -239,7 +239,7 @@ export default function OwnerExpensesPage() {
               <option value="Energiya">Energiya</option>
               <option value="Logistika">Logistika</option>
               <option value="Texnik">Texnik</option>
-              <option value="Ish haqi">Ish haqi</option>
+              <option value="Boshqa">Boshqa</option>
             </select>
           </div>
         </div>
@@ -281,7 +281,7 @@ export default function OwnerExpensesPage() {
           searchableFields={["id", "title", "category", "department", "status"]}
           renderCell={(row, col) => {
             if (col.key === "amount") {
-              return currencyFormatter.format(row[col.key])
+              return `${currencyFormatter.format(row[col.key])} so'm`
             }
             return row[col.key]
           }}
@@ -323,19 +323,13 @@ export default function OwnerExpensesPage() {
             setIsSubmitting(true)
             setEmployeeError(null)
 
-            if (newExpense.category === "Ish haqi" && !newExpense.employeeName) {
-              setEmployeeError("Xodim majburiy")
-              setIsSubmitting(false)
-              return
-            }
             try {
               const payload = {
                 title: newExpense.title,
                 category: newExpense.category,
                 department: newExpense.department,
-                employeeName: newExpense.category === "Ish haqi" ? newExpense.employeeName : undefined,
                 amount: Number(newExpense.amount) || 0,
-                currency: "USD",
+                currency: "UZS",
                 date: newExpense.date,
                 status: newExpense.status,
               }
@@ -346,7 +340,7 @@ export default function OwnerExpensesPage() {
               setExpenses((prev) => [...prev, created as Expense])
 
               // TODO: Add expense to records
-              alert(`Yangi rasxod qo'shildi: ${created.title} - ${currencyFormatter.format((created as Expense).amount)}`)
+              alert(`Yangi rasxod qo'shildi: ${created.title} - ${currencyFormatter.format((created as Expense).amount)} so'm`)
               setIsAddExpenseModalOpen(false)
               setNewExpense({
                 title: "",
@@ -361,7 +355,11 @@ export default function OwnerExpensesPage() {
             } catch (err: any) {
               if (err instanceof ApiError) {
                 const backendMessage = (err.data && (err.data as any).message) || err.message || "Rasxodni saqlashda xatolik yuz berdi"
-                setModalError(backendMessage)
+                if (err.status === 400 && err.data && (err.data as any).code === "VALIDATION_EXCEPTION") {
+                  setModalError("Ish haqi faqat ishchilar oyligi sahifasi orqali kiritiladi")
+                } else {
+                  setModalError(backendMessage)
+                }
               } else {
                 setModalError("Rasxodni saqlashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
               }
@@ -391,40 +389,19 @@ export default function OwnerExpensesPage() {
                 setNewExpense((prev) => ({
                   ...prev,
                   category,
-                  employeeName: category === "Ish haqi" ? prev.employeeName : "",
+                  employeeName: "",
                 }))
               }}
               options={[
                 { value: "Energiya", label: "Energiya" },
                 { value: "Logistika", label: "Logistika" },
                 { value: "Texnik", label: "Texnik" },
-                { value: "Ish haqi", label: "Ish haqi" },
                 { value: "Boshqa", label: "Boshqa" },
               ]}
             />
           </div>
-          {newExpense.category === "Ish haqi" && (
-            <div>
-              <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Xodim</label>
-              <SelectField
-                value={newExpense.employeeName}
-                onChange={(employeeName) => {
-                  setEmployeeError(null)
-                  const selected = employees.find((e) => e.fullName === employeeName)
-                  setNewExpense((prev) => ({
-                    ...prev,
-                    employeeName,
-                    department: selected?.department || prev.department,
-                  }))
-                }}
-                options={employees.map((emp) => ({ value: emp.fullName, label: emp.fullName }))}
-              />
-              {employeeError && <p className="mt-1 text-xs text-red-600">{employeeError}</p>}
-              {employeesError && <p className="mt-1 text-xs text-red-600">{employeesError}</p>}
-            </div>
-          )}
           <div>
-            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Miqdor ($)</label>
+            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Miqdor (so'm)</label>
             <input
               type="number"
               value={newExpense.amount}

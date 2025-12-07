@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from "react"
 import { DataTable } from "@/components/data-table"
 import { ApiError, get } from "@/styles/lib/api"
 
-type ProductionRecord = {
+type ProductOutflow = {
+  id: string
   batchId: string
   product: string
   shift: string
@@ -13,6 +14,7 @@ type ProductionRecord = {
   quantity: number
   unit: string
   price: number
+  totalSum: number
   transport: string
   operator: string
   producedAt: string
@@ -45,7 +47,7 @@ export default function OwnerProductionPage() {
     product: "all",
     shift: "all",
   })
-  const [records, setRecords] = useState<ProductionRecord[]>([])
+  const [records, setRecords] = useState<ProductOutflow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -56,7 +58,7 @@ export default function OwnerProductionPage() {
       setIsLoading(true)
       setError(null)
       try {
-        const response = await get<ProductionRecord[] | { items?: ProductionRecord[] }>("/production/batches", {
+        const response = await get<ProductOutflow[] | { items?: ProductOutflow[] }>("/production/outflows", {
           params: {
             dateFrom: filters.dateFrom || undefined,
             dateTo: filters.dateTo || undefined,
@@ -103,16 +105,11 @@ export default function OwnerProductionPage() {
 
   const filteredRecords = useMemo(
     () =>
-      records
-        .filter((record) => {
-          const matchesProduct = filters.product === "all" || record.product === filters.product
-          const matchesShift = filters.shift === "all" || record.shift === filters.shift
-          return matchesProduct && matchesShift && withinRange(record.producedAt)
-        })
-        .map((record) => ({
-          ...record,
-          totalSum: record.quantity * record.price,
-        })),
+      records.filter((record) => {
+        const matchesProduct = filters.product === "all" || record.product === filters.product
+        const matchesShift = filters.shift === "all" || record.shift === filters.shift
+        return matchesProduct && matchesShift && withinRange(record.producedAt)
+      }),
     [records, filters.product, filters.shift, filters.dateFrom, filters.dateTo],
   )
 
@@ -174,9 +171,9 @@ export default function OwnerProductionPage() {
               className="w-full sm-select"
             >
               <option value="all">Barchasi</option>
-              <option value="Tonggi">Tonggi</option>
-              <option value="Kunduzgi">Kunduzgi</option>
-              <option value="Kechgi">Kechgi</option>
+              <option value="MORNING">Tonggi</option>
+              <option value="DAY">Kunduzgi</option>
+              <option value="NIGHT">Kechgi</option>
             </select>
           </div>
         </div>

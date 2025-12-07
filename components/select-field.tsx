@@ -45,7 +45,15 @@ export function SelectField({ value, onChange, options, placeholder, className }
         onClick={() => setOpen((prev) => !prev)}
         className="w-full sm-select flex items-center justify-between gap-2"
       >
-        <span className={selected ? "text-slate-900" : "text-slate-400"}>{selected?.label ?? placeholder ?? "Tanlang"}</span>
+        <span
+          className={
+            selected
+              ? "text-slate-900 dark:text-slate-100"
+              : "text-slate-400 dark:text-slate-400"
+          }
+        >
+          {selected?.label ?? placeholder ?? "Tanlang"}
+        </span>
         <ChevronDown
           className={`w-4 h-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
         />
@@ -54,7 +62,7 @@ export function SelectField({ value, onChange, options, placeholder, className }
       {open && (
         <div
           ref={listRef}
-          className="absolute z-50 mt-1 w-full rounded-xl border border-slate-200 bg-white shadow-lg max-h-60 overflow-auto sm-animate-submenu-in"
+          className="absolute z-50 mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg max-h-60 overflow-auto sm-animate-submenu-in"
         >
           {options.map((option) => {
             const isActive = option.value === value
@@ -69,7 +77,7 @@ export function SelectField({ value, onChange, options, placeholder, className }
                 className={`w-full px-3 py-2 text-left text-sm transition-colors ${
                   isActive
                     ? "bg-[#2563EB] text-white"
-                    : "text-slate-700 hover:bg-slate-50"
+                    : "text-slate-700 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800"
                 }`}
               >
                 {option.label}

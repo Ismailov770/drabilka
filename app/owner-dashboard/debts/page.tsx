@@ -81,45 +81,45 @@ export default function OwnerDebtsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-semibold text-slate-900">Owner — Debts Overview</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Aggregated view of credits and outstanding balances by company.
+        <h1 className="text-3xl font-semibold text-foreground">Qarzlar — umumiy ko'rinish</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Kompaniyalar bo'yicha qarzlar va qolgan summalarning yig'ma ko'rinishi.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <StatCard
-          label="Total owed"
-          value={`$${totals.totalAmount.toLocaleString()}`}
+          label="Umumiy qarz"
+          value={`${totals.totalAmount.toLocaleString()} so'm`}
           icon={<CreditCard className="w-5 h-5" />}
           color="orange"
         />
         <StatCard
-          label="Outstanding"
-          value={`$${totals.totalOutstanding.toLocaleString()}`}
+          label="Qolgan qarz"
+          value={`${totals.totalOutstanding.toLocaleString()} so'm`}
           icon={<Hourglass className="w-5 h-5" />}
           color="red"
         />
       </div>
 
-      <div className="bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100">
+      <div className="bg-card rounded-2xl p-6 card-shadow-lg border border-border">
         <div className="flex flex-col gap-1 mb-4">
-          <h2 className="text-lg font-semibold text-slate-900">By Company</h2>
-          <p className="text-sm text-slate-500">Grouped view of debts by client company.</p>
+          <h2 className="text-lg font-semibold text-foreground">Kompaniyalar bo'yicha</h2>
+          <p className="text-sm text-muted-foreground">Qarzlar mijoz kompaniyalar bo'yicha guruhlangan ko'rinishi.</p>
         </div>
 
         <DataTable
           columns={[
-            { key: "company", label: "Company" },
-            { key: "count", label: "Count" },
-            { key: "totalDue", label: "Total Due" },
-            { key: "outstanding", label: "Outstanding" },
+            { key: "company", label: "Kompaniya" },
+            { key: "count", label: "Qaydlar soni" },
+            { key: "totalDue", label: "Umumiy qarz (so'm)" },
+            { key: "outstanding", label: "Qolgan qarz (so'm)" },
           ]}
           data={grouping.map((g) => ({
             company: g.company,
             count: g.count,
-            totalDue: `$${g.totalDue.toLocaleString()}`,
-            outstanding: `$${g.outstanding.toLocaleString()}`,
+            totalDue: `${g.totalDue.toLocaleString()} so'm`,
+            outstanding: `${g.outstanding.toLocaleString()} so'm`,
           }))}
         />
       </div>
