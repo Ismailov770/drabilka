@@ -312,14 +312,14 @@ export default function OwnerDriverFuelPage() {
                 vehicle: "all",
               })
             }
-            className="px-4 py-2 border border-slate-200 text-sm text-slate-700 rounded-full bg-white hover:bg-slate-50 mt-2"
+            className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-sm text-slate-700 rounded-full bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 mt-2"
           >
             Filtrlarni tozalash
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 card-shadow-lg border border-slate-100 dark:border-slate-800">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-slate-900">Yoqilg'i sarfi jurnali</h2>
         </div>

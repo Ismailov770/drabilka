@@ -230,7 +230,7 @@ export default function OwnerDashboard() {
       </div>
 
       {/* Filtrlar */}
-      <div className="bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100 space-y-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 card-shadow-lg border border-slate-100 dark:border-slate-800 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Davr boshi</label>
@@ -278,7 +278,7 @@ export default function OwnerDashboard() {
 
       {/* Umumiy statistika bo'yicha kartochkalar */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm">
           <p className="text-xs font-medium text-slate-500">Ishlab chiqarilgan (m³)</p>
           <p className="mt-1 text-2xl font-semibold text-slate-900">
             {numberFormatter.format(totals.produced)}
@@ -321,7 +321,7 @@ export default function OwnerDashboard() {
 
       {/* Batafsil bo'limlar */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100">
+        <div className="xl:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-6 card-shadow-lg border border-slate-100 dark:border-slate-800">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-slate-900">Oxirgi batchlar</h2>
             <span className="text-sm text-slate-500">So'nggi 4 ta partiya</span>
@@ -331,7 +331,7 @@ export default function OwnerDashboard() {
             {latestBatches.map((batch) => (
               <div
                 key={batch.batchId}
-                className="flex items-center justify-between border border-slate-200 rounded-2xl p-4 hover:bg-slate-50 transition-colors"
+                className="flex items-center justify-between border border-slate-200 dark:border-slate-800 rounded-2xl p-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
                 <div>
                   <p className="font-semibold text-slate-900">
@@ -354,14 +354,14 @@ export default function OwnerDashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 card-shadow-lg border border-slate-100 dark:border-slate-800">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Rasxodlar bo'yicha signal</h2>
           {expensesError && <p className="mb-2 text-sm text-red-600">{expensesError}</p>}
           <div className="space-y-4">
             {expenseSignals.map((item) => (
               <div
                 key={item.category}
-                className="border border-slate-200 rounded-xl p-4 hover:bg-slate-50 transition-colors"
+                className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
                 <div className="flex items-center justify-between mb-1">
                   <p className="font-semibold text-slate-900">{item.category}</p>
@@ -378,7 +378,7 @@ export default function OwnerDashboard() {
       </div>
 
       {/* Mashinalar harakati */}
-      <div className="bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 card-shadow-lg border border-slate-100 dark:border-slate-800">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-900">Kelib chiqayotgan mashinalar</h2>
           <div className="flex items-center gap-3">
@@ -409,7 +409,7 @@ export default function OwnerDashboard() {
                   return (
                     <tr
                       key={`${vehicle.vehicleIdCode}-${timestamp}`}
-                      className="border-b border-slate-100 hover:bg-slate-50"
+                      className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
                     >
                       <td className="px-4 py-3 font-medium text-slate-900">{vehicle.vehicleIdCode}</td>
                     <td className="px-4 py-3">

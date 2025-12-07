@@ -4,6 +4,7 @@ import { Button } from "@/components/button"
 import { useEffect, useState } from "react"
 import { Modal } from "@/components/modal"
 import { DataTable } from "@/components/data-table"
+import { SelectField } from "@/components/select-field"
 import { printSaleReceipt } from "@/components/print-receipt"
 import { ApiError, get, post } from "@/styles/lib/api"
 
@@ -188,19 +189,19 @@ export default function CashierDashboard() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-4 card-shadow-lg border border-slate-100">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 card-shadow-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
           <p className="text-xs text-slate-500 mb-1">{UZBEK_CONTENT.summaryTotalSalary}</p>
           <p className="text-2xl font-semibold text-slate-900">{totalSalary.toLocaleString("uz-UZ")} so'm</p>
         </div>
-        <div className="bg-white rounded-2xl p-4 card-shadow-lg border border-slate-100">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 card-shadow-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
           <p className="text-xs text-slate-500 mb-1">{UZBEK_CONTENT.summaryTotalAdvances}</p>
           <p className="text-2xl font-semibold text-amber-600">{totalSalaryAdvances.toLocaleString("uz-UZ")} so'm</p>
         </div>
-        <div className="bg-white rounded-2xl p-4 card-shadow-lg border border-slate-100">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 card-shadow-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
           <p className="text-xs text-slate-500 mb-1">{UZBEK_CONTENT.summaryTotalGeneralExpenses}</p>
           <p className="text-2xl font-semibold text-rose-600">{totalGeneralExpenses.toLocaleString("uz-UZ")} so'm</p>
         </div>
-        <div className="bg-white rounded-2xl p-4 card-shadow-lg border border-slate-100">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 card-shadow-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
           <p className="text-xs text-slate-500 mb-1">{UZBEK_CONTENT.summaryTotalAllCosts}</p>
           <p className="text-2xl font-semibold text-blue-600">{totalAllCosts.toLocaleString("uz-UZ")} so'm</p>
         </div>
@@ -210,7 +211,7 @@ export default function CashierDashboard() {
       {/* Sales Table (dashboard) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Employees Overview */}
-        <div className="bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 card-shadow-lg border border-slate-100 dark:border-slate-800">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">{UZBEK_CONTENT.employees}</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -224,7 +225,10 @@ export default function CashierDashboard() {
               </thead>
               <tbody>
                 {employees.map((emp, index) => (
-                  <tr key={index} className="border-b border-slate-100 hover:bg-slate-50">
+                  <tr
+                    key={index}
+                    className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
                     <td className="px-3 py-3 text-slate-900 font-medium">{emp.name}</td>
                     <td className="px-3 py-3 text-slate-700">{emp.salary.toLocaleString("uz-UZ")} so'm</td>
                     <td className="px-3 py-3 text-slate-700">{emp.paidAdvance.toLocaleString("uz-UZ")} so'm</td>
@@ -237,13 +241,13 @@ export default function CashierDashboard() {
         </div>
 
         {/* Advances Overview */}
-        <div className="bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 card-shadow-lg border border-slate-100 dark:border-slate-800">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">{UZBEK_CONTENT.advances}</h2>
           <div className="space-y-3">
             {employees.map((emp, index) => (
               <div
                 key={index}
-                className="flex justify-between items-center p-3 border border-slate-100 rounded-lg hover:bg-slate-50"
+                className="flex justify-between items-center p-3 border border-slate-100 dark:border-slate-800 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 <div>
                   <p className="font-medium text-slate-900">{emp.name}</p>
@@ -257,22 +261,22 @@ export default function CashierDashboard() {
       </div>
 
       {/* All Expenses Table */}
-      <div className="bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 card-shadow-lg border border-slate-100 dark:border-slate-800">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-lg font-semibold text-slate-900">{UZBEK_CONTENT.expenseTable}</h2>
           <div className="flex gap-2">
-            <select
+            <SelectField
               value={selectedExpenseFilter}
-              onChange={(e) => setSelectedExpenseFilter(e.target.value)}
-              className="sm-select text-sm"
-            >
-              <option value="all">Barcha rasxodlar</option>
-              <option value="salary">Oyliq</option>
-              <option value="advance">Ehtyot</option>
-              <option value="fuel">Solyarka</option>
-              <option value="road">Yo'l</option>
-              <option value="other">Boshqa</option>
-            </select>
+              onChange={(value) => setSelectedExpenseFilter(value)}
+              options={[
+                { value: "all", label: "Barcha rasxodlar" },
+                { value: "salary", label: "Oyliq" },
+                { value: "advance", label: "Ehtyot" },
+                { value: "fuel", label: "Solyarka" },
+                { value: "road", label: "Yo'l" },
+                { value: "other", label: "Boshqa" },
+              ]}
+            />
           </div>
         </div>
 
@@ -284,7 +288,7 @@ export default function CashierDashboard() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
+              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
                 <th className="text-left px-4 py-3 font-semibold text-slate-700">{UZBEK_CONTENT.date}</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-700">{UZBEK_CONTENT.type}</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-700">{UZBEK_CONTENT.employeeName}</th>
@@ -304,7 +308,10 @@ export default function CashierDashboard() {
                     (selectedExpenseFilter === "other" && exp.type === "Boshqa"),
                 )
                 .map((exp, i) => (
-                  <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
+                  <tr
+                    key={i}
+                    className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
                     <td className="px-4 py-3 text-slate-600 text-sm">{exp.date}</td>
                     <td className="px-4 py-3">
                       <span
@@ -385,14 +392,14 @@ export default function CashierDashboard() {
 
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">{UZBEK_CONTENT.materialType}</label>
-            <select
+            <SelectField
               value={newMaterial}
-              onChange={(e) => setNewMaterial(e.target.value)}
-              className="w-full sm-select"
-            >
-              <option>Oddiy sement</option>
-              <option>Tez qotuvchi sement</option>
-            </select>
+              onChange={(value) => setNewMaterial(value)}
+              options={[
+                { value: "Oddiy sement", label: "Oddiy sement" },
+                { value: "Tez qotuvchi sement", label: "Tez qotuvchi sement" },
+              ]}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -420,14 +427,14 @@ export default function CashierDashboard() {
 
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">{UZBEK_CONTENT.paymentType}</label>
-            <select
+            <SelectField
               value={newPaymentType}
-              onChange={(e) => setNewPaymentType(e.target.value)}
-              className="w-full sm-select"
-            >
-              <option value="Naqd">{UZBEK_CONTENT.cash}</option>
-              <option value="Qarzga">Qarzga</option>
-            </select>
+              onChange={(value) => setNewPaymentType(value)}
+              options={[
+                { value: "Naqd", label: UZBEK_CONTENT.cash },
+                { value: "Qarzga", label: "Qarzga" },
+              ]}
+            />
           </div>
 
           <Button type="submit" variant="primary" className="w-full">
@@ -446,19 +453,19 @@ export default function CashierDashboard() {
         <form className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">{UZBEK_CONTENT.expenseType}</label>
-            <select
+            <SelectField
               value={newExpenseType}
-              onChange={(e) => {
-                const value = e.target.value
+              onChange={(value) => {
                 setNewExpenseType(value)
                 setNewExpenseEmployee("")
               }}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-            >
-              <option value={UZBEK_CONTENT.fuel}>{UZBEK_CONTENT.fuel}</option>
-              <option value={UZBEK_CONTENT.road}>{UZBEK_CONTENT.road}</option>
-              <option value={UZBEK_CONTENT.other}>{UZBEK_CONTENT.other}</option>
-            </select>
+              options={[
+                { value: UZBEK_CONTENT.fuel, label: UZBEK_CONTENT.fuel },
+                { value: UZBEK_CONTENT.road, label: UZBEK_CONTENT.road },
+                { value: UZBEK_CONTENT.other, label: UZBEK_CONTENT.other },
+              ]}
+              className="w-full"
+            />
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">{UZBEK_CONTENT.amount}</label>

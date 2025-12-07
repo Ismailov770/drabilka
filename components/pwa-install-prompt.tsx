@@ -15,6 +15,22 @@ export function PwaInstallPrompt() {
   useEffect(() => {
     if (typeof window === "undefined") return
 
+    const DISMISS_KEY = "pwa-install-dismissed-at"
+    const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000 // 1 hafta
+
+    let recentlyDismissed = false
+    try {
+      const raw = window.localStorage.getItem(DISMISS_KEY)
+      if (raw) {
+        const ts = Number(raw)
+        if (!Number.isNaN(ts) && Date.now() - ts < DISMISS_DURATION_MS) {
+          recentlyDismissed = true
+        }
+      }
+    } catch {
+      // localStorage bo'lmasa, shunchaki davom etamiz
+    }
+
     const userAgent = window.navigator.userAgent.toLowerCase()
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent)
     const isStandalone =
@@ -23,6 +39,14 @@ export function PwaInstallPrompt() {
 
     setIsIos(isIosDevice)
 
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {})
+    }
+
+    if (recentlyDismissed) {
+      return
+    }
+
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault()
       setDeferredPrompt(event as BeforeInstallPromptEvent)
@@ -30,10 +54,6 @@ export function PwaInstallPrompt() {
     }
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
-
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {})
-    }
 
     if (isIosDevice && !isStandalone) {
       setVisible(true)
@@ -46,6 +66,7 @@ export function PwaInstallPrompt() {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
+      // iOS yoki beforeinstallprompt bo'lmagan brauzerlar uchun
       setVisible(false)
       return
     }
@@ -53,6 +74,18 @@ export function PwaInstallPrompt() {
     await deferredPrompt.userChoice
     setVisible(false)
     setDeferredPrompt(null)
+  }
+
+  const handleDismiss = () => {
+    setVisible(false)
+    setDeferredPrompt(null)
+
+    if (typeof window === "undefined") return
+    try {
+      window.localStorage.setItem("pwa-install-dismissed-at", String(Date.now()))
+    } catch {
+      // localStorage yo'q bo'lsa, shunchaki e'tiborsiz qoldiramiz
+    }
   }
 
   if (!visible) return null
@@ -77,7 +110,7 @@ export function PwaInstallPrompt() {
         </button>
         <button
           type="button"
-          onClick={() => setVisible(false)}
+          onClick={handleDismiss}
           className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition-colors"
         >
           Bekor
