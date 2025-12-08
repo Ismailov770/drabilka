@@ -28,7 +28,13 @@ export function SidebarNav({ role, items, onNavigate }: SidebarNavProps) {
   }
 
   const handleLogout = () => {
-    sessionStorage.removeItem("userRole")
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("authToken")
+      window.localStorage.removeItem("authUser")
+      window.localStorage.removeItem("userRole")
+      window.localStorage.removeItem("userLanguage")
+      window.sessionStorage.removeItem("userRole")
+    }
     router.push("/")
   }
 

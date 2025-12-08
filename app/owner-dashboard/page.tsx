@@ -3,17 +3,17 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { ApiError, get } from "@/styles/lib/api"
+type Sale = {
+  id: string
+  date: string
+  weight: number
+}
 
-const timelineData = [
-  { date: "2024-01-02", produced: 145, sold: 118, expenses: 23000, payroll: 9000, machineUsage: 15 },
-  { date: "2024-01-08", produced: 162, sold: 134, expenses: 25000, payroll: 9800, machineUsage: 18 },
-  { date: "2024-01-15", produced: 178, sold: 150, expenses: 26800, payroll: 10100, machineUsage: 20 },
-  { date: "2024-01-22", produced: 185, sold: 160, expenses: 27600, payroll: 10200, machineUsage: 22 },
-  { date: "2024-01-29", produced: 191, sold: 168, expenses: 28300, payroll: 10400, machineUsage: 21 },
-  { date: "2024-02-05", produced: 205, sold: 180, expenses: 29500, payroll: 10700, machineUsage: 23 },
-  { date: "2024-02-12", produced: 212, sold: 186, expenses: 30200, payroll: 10800, machineUsage: 24 },
-  { date: "2024-02-19", produced: 225, sold: 194, expenses: 31400, payroll: 11000, machineUsage: 25 },
-]
+type PayrollRecord = {
+  id: string
+  payoutDate: string
+  total: number
+}
 
 type ProductionBatch = {
   batchId: string
@@ -51,9 +51,6 @@ const quickRanges = [
   { label: "14 kun", days: 14 },
   { label: "30 kun", days: 30 },
 ]
-
-const today = new Date()
-const currentYear = today.getFullYear()
 const defaultDateFrom = ""
 const defaultDateTo = ""
 
@@ -62,6 +59,7 @@ export default function OwnerDashboard() {
     dateFrom: defaultDateFrom,
     dateTo: defaultDateTo,
   })
+  const [allBatches, setAllBatches] = useState<ProductionBatch[]>([])
   const [latestBatches, setLatestBatches] = useState<ProductionBatch[]>([])
   const [batchesError, setBatchesError] = useState<string | null>(null)
   const [isBatchesLoading, setIsBatchesLoading] = useState(false)
@@ -71,6 +69,9 @@ export default function OwnerDashboard() {
 
   const [vehicleLogs, setVehicleLogs] = useState<VehicleLogEntry[]>([])
   const [vehiclesError, setVehiclesError] = useState<string | null>(null)
+
+  const [sales, setSales] = useState<Sale[]>([])
+  const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([])
 
   const withinRange = (dateStr: string) => {
     const current = new Date(dateStr).getTime()
@@ -92,7 +93,13 @@ export default function OwnerDashboard() {
       try {
         setIsBatchesLoading(true)
 
-        const [batchesResponse, expensesResponse, vehiclesResponse] = await Promise.all([
+        const [
+          batchesResponse,
+          expensesResponse,
+          vehiclesResponse,
+          salesResponse,
+          payrollResponse,
+        ] = await Promise.all([
           get<ProductionBatch[] | { items?: ProductionBatch[] }>("/production/batches", {
             params: {
               dateFrom: filters.dateFrom || undefined,
@@ -111,6 +118,18 @@ export default function OwnerDashboard() {
               dateTo: filters.dateTo || undefined,
             },
           }),
+          get<Sale[] | { items?: Sale[] }>("/sales", {
+            params: {
+              dateFrom: filters.dateFrom || undefined,
+              dateTo: filters.dateTo || undefined,
+            },
+          }),
+          get<PayrollRecord[] | { items?: PayrollRecord[] }>("/payroll", {
+            params: {
+              dateFrom: filters.dateFrom || undefined,
+              dateTo: filters.dateTo || undefined,
+            },
+          }),
         ])
 
         if (cancelled) return
@@ -124,6 +143,7 @@ export default function OwnerDashboard() {
           }
           return bTime - aTime
         })
+        setAllBatches(batches)
         setLatestBatches(sortedBatches.slice(0, 4))
 
         const expenseItems = Array.isArray(expensesResponse) ? expensesResponse : expensesResponse.items ?? []
@@ -131,6 +151,12 @@ export default function OwnerDashboard() {
 
         const vehicleItems = Array.isArray(vehiclesResponse) ? vehiclesResponse : vehiclesResponse.items ?? []
         setVehicleLogs(vehicleItems)
+
+        const salesItems = Array.isArray(salesResponse) ? salesResponse : salesResponse.items ?? []
+        setSales(salesItems)
+
+        const payrollItems = Array.isArray(payrollResponse) ? payrollResponse : payrollResponse.items ?? []
+        setPayrollRecords(payrollItems)
       } catch (err: any) {
         if (cancelled) return
 
@@ -160,8 +186,6 @@ export default function OwnerDashboard() {
         return "Kunduzgi smena"
       case "NIGHT":
         return "Kechgi smena"
-      case "MORNING":
-        return "Tonggi smena"
       default:
         return shift
     }
@@ -180,9 +204,24 @@ export default function OwnerDashboard() {
       .slice(0, 4)
   }, [expenses])
 
-  const filteredTimeline = useMemo(
-    () => timelineData.filter((row) => withinRange(row.date)),
-    [filters.dateFrom, filters.dateTo],
+  const filteredBatchesForTotals = useMemo(
+    () => allBatches.filter((batch) => withinRange(batch.producedAt)),
+    [allBatches, filters.dateFrom, filters.dateTo],
+  )
+
+  const filteredSales = useMemo(
+    () => sales.filter((sale) => withinRange(sale.date)),
+    [sales, filters.dateFrom, filters.dateTo],
+  )
+
+  const filteredExpenses = useMemo(
+    () => expenses.filter((expense) => withinRange(expense.date)),
+    [expenses, filters.dateFrom, filters.dateTo],
+  )
+
+  const filteredPayroll = useMemo(
+    () => payrollRecords.filter((record) => withinRange(record.payoutDate)),
+    [payrollRecords, filters.dateFrom, filters.dateTo],
   )
 
   const filteredVehicles = useMemo(
@@ -196,19 +235,39 @@ export default function OwnerDashboard() {
   )
 
   const totals = useMemo(
+    () => {
+      const acc = { produced: 0, sold: 0, expenses: 0, payroll: 0, machine: 0 }
+
+      for (const batch of filteredBatchesForTotals) {
+        acc.produced += batch.quantity
+      }
+
+      for (const sale of filteredSales) {
+        acc.sold += sale.weight
+      }
+
+      for (const expense of filteredExpenses) {
+        acc.expenses += expense.amount
+      }
+
+      for (const record of filteredPayroll) {
+        acc.payroll += record.total
+      }
+
+      acc.machine = filteredVehicles.length
+
+      return acc
+    },
+    [filteredBatchesForTotals, filteredSales, filteredExpenses, filteredPayroll, filteredVehicles],
+  )
+
+  const hasAnyData = useMemo(
     () =>
-      filteredTimeline.reduce(
-        (acc, row) => {
-          acc.produced += row.produced
-          acc.sold += row.sold
-          acc.expenses += row.expenses
-          acc.payroll += row.payroll
-          acc.machine += row.machineUsage
-          return acc
-        },
-        { produced: 0, sold: 0, expenses: 0, payroll: 0, machine: 0 },
-      ),
-    [filteredTimeline],
+      filteredBatchesForTotals.length > 0 ||
+      filteredSales.length > 0 ||
+      filteredExpenses.length > 0 ||
+      filteredPayroll.length > 0,
+    [filteredBatchesForTotals, filteredSales, filteredExpenses, filteredPayroll],
   )
 
   const applyQuickRange = (days: number) => {
@@ -284,7 +343,7 @@ export default function OwnerDashboard() {
             {numberFormatter.format(totals.produced)}
           </p>
           <p className="mt-1 text-xs text-slate-400">
-            {filteredTimeline.length ? "Tanlangan davr bo'yicha" : "Ma'lumot yo'q"}
+            {hasAnyData ? "Tanlangan davr bo'yicha" : "Ma'lumot yo'q"}
           </p>
         </div>
 
@@ -294,7 +353,7 @@ export default function OwnerDashboard() {
             {numberFormatter.format(totals.sold)}
           </p>
           <p className="mt-1 text-xs text-slate-400">
-            {filteredTimeline.length ? "Tanlangan davr bo'yicha" : "Ma'lumot yo'q"}
+            {hasAnyData ? "Tanlangan davr bo'yicha" : "Ma'lumot yo'q"}
           </p>
         </div>
 
@@ -304,7 +363,7 @@ export default function OwnerDashboard() {
             {currencyFormatter.format(totals.expenses)} so'm
           </p>
           <p className="mt-1 text-xs text-slate-400">
-            {filteredTimeline.length ? "Tanlangan davr bo'yicha" : "Ma'lumot yo'q"}
+            {hasAnyData ? "Tanlangan davr bo'yicha" : "Ma'lumot yo'q"}
           </p>
         </div>
 
@@ -314,7 +373,7 @@ export default function OwnerDashboard() {
             {currencyFormatter.format(totals.payroll)} so'm
           </p>
           <p className="mt-1 text-xs text-slate-400">
-            {filteredTimeline.length ? "Tanlangan davr bo'yicha" : "Ma'lumot yo'q"}
+            {hasAnyData ? "Tanlangan davr bo'yicha" : "Ma'lumot yo'q"}
           </p>
         </div>
       </div>

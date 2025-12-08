@@ -22,17 +22,6 @@ const UZBEK_CONTENT = {
   },
 }
 
-function inferRoleFromUsername(username: string): "owner" | "cashier" | "driver" | "technical" | null {
-  const value = username.trim().toLowerCase()
-
-  if (value.startsWith("owner")) return "owner"
-  if (value.startsWith("cashier")) return "cashier"
-  if (value.startsWith("driver")) return "driver"
-  if (value.startsWith("technical")) return "technical"
-
-  return null
-}
-
 export default function LoginPage() {
   const router = useRouter()
   const [username, setUsername] = useState<string>("")
@@ -43,12 +32,6 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!username || !password) {
-      return
-    }
-
-    const inferredRole = inferRoleFromUsername(username)
-    if (!inferredRole) {
-      setError("Bu login uchun rol aniqlanmadi. Iltimos, administrator bilan bog'laning.")
       return
     }
 
@@ -68,7 +51,6 @@ export default function LoginPage() {
       }>("/auth/login", {
         username,
         password,
-        role: inferredRole,
       })
 
       if (typeof window !== "undefined") {
