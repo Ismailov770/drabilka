@@ -130,6 +130,14 @@ const currentYear = today.getFullYear()
 const defaultDateFrom = ""
 const defaultDateTo = ""
 
+function getTodayDateString() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const day = String(now.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 export default function OwnerPayrollPage() {
   const [filters, setFilters] = useState({
     dateFrom: defaultDateFrom,
@@ -144,7 +152,7 @@ export default function OwnerPayrollPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<PayrollRecord | null>(null)
   const [paymentData, setPaymentData] = useState({
     amount: "",
-    paymentDate: new Date().toISOString().split("T")[0],
+    paymentDate: getTodayDateString(),
     notes: "",
   })
   const [newEmployee, setNewEmployee] = useState({
@@ -152,7 +160,7 @@ export default function OwnerPayrollPage() {
     role: "",
     department: "",
     baseSalary: "",
-    hiredAt: new Date().toISOString().split("T")[0],
+    hiredAt: getTodayDateString(),
     username: "",
     password: "",
   })
@@ -598,7 +606,7 @@ export default function OwnerPayrollPage() {
           setSelectedEmployee(null)
           setPaymentData({
             amount: "",
-            paymentDate: new Date().toISOString().split("T")[0],
+            paymentDate: getTodayDateString(),
             notes: "",
           })
           setPayError(null)
@@ -822,7 +830,7 @@ export default function OwnerPayrollPage() {
             role: "",
             department: "",
             baseSalary: "",
-            hiredAt: new Date().toISOString().split("T")[0],
+            hiredAt: getTodayDateString(),
             username: "",
             password: "",
           })

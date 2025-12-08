@@ -38,6 +38,14 @@ const columns = [
 const quantityFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 3 })
 const amountFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 })
 
+function getTodayDateString() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const day = String(now.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 export default function OwnerProductFlowPage() {
   const { toast } = useToast()
 
@@ -54,7 +62,7 @@ export default function OwnerProductFlowPage() {
     product: "",
     quantity: "",
     amount: "",
-    loggedAt: new Date().toISOString().split("T")[0],
+    loggedAt: getTodayDateString(),
   })
   const [fieldErrors, setFieldErrors] = useState({
     product: "",
@@ -243,7 +251,7 @@ export default function OwnerProductFlowPage() {
             product: "",
             quantity: "",
             amount: "",
-            loggedAt: new Date().toISOString().split("T")[0],
+            loggedAt: getTodayDateString(),
           })
           setFieldErrors({
             product: "",
@@ -306,7 +314,8 @@ export default function OwnerProductFlowPage() {
                 return
               }
 
-              const loggedAt = new Date(dateOnly).toISOString()
+              const loggedAtDate = dateOnly && dateOnly.length === 10 ? dateOnly : getTodayDateString()
+              const loggedAt = `${loggedAtDate}T00:00:00`
 
               const payload: ProductFlowCreateRequest = {
                 product,
@@ -343,7 +352,7 @@ export default function OwnerProductFlowPage() {
                 product: "M400",
                 quantity: "",
                 amount: "",
-                loggedAt: new Date().toISOString().split("T")[0],
+                loggedAt: getTodayDateString(),
               })
             } catch (err: any) {
               if (err instanceof ApiError) {

@@ -7,6 +7,14 @@ import { FileDropzone } from "@/components/file-dropzone"
 import { SelectField } from "@/components/select-field"
 import { useState } from "react"
 
+function getTodayDateString() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const day = String(now.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 export default function RepairsPage() {
   const [showAddRepair, setShowAddRepair] = useState(false)
   const [photosText, setPhotosText] = useState("")
@@ -95,7 +103,7 @@ export default function RepairsPage() {
             <label className="block text-sm font-medium text-[#0F172A] mb-2">Repair Date *</label>
             <input
               type="date"
-              defaultValue={new Date().toISOString().split("T")[0]}
+              defaultValue={getTodayDateString()}
               className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
               required
             />

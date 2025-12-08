@@ -112,6 +112,14 @@ const defaultDateTo = ""
 
 const isCashierRole = (role: string | undefined | null) => (role ?? "").toLowerCase() === "cashier"
 
+function getTodayDateString() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const day = String(now.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 export default function CashierPayrollPage() {
   const [filters, setFilters] = useState({
     dateFrom: defaultDateFrom,
@@ -125,7 +133,7 @@ export default function CashierPayrollPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<PayrollRecord | null>(null)
   const [paymentData, setPaymentData] = useState({
     amount: "",
-    paymentDate: new Date().toISOString().split("T")[0],
+    paymentDate: getTodayDateString(),
     notes: "",
   })
   const [payError, setPayError] = useState<string | null>(null)
@@ -413,7 +421,7 @@ export default function CashierPayrollPage() {
                       setSelectedEmployee(record)
                       setPaymentData({
                         amount: record.remaining > 0 ? record.remaining.toString() : "",
-                        paymentDate: new Date().toISOString().split("T")[0],
+                        paymentDate: getTodayDateString(),
                         notes: "",
                       })
                       setIsPaySalaryModalOpen(true)
@@ -493,7 +501,7 @@ export default function CashierPayrollPage() {
                 setSelectedEmployee(null)
                 setPaymentData({
                   amount: "",
-                  paymentDate: new Date().toISOString().split("T")[0],
+                  paymentDate: getTodayDateString(),
                   notes: "",
                 })
               } catch (err: any) {

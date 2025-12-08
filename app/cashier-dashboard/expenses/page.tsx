@@ -42,6 +42,14 @@ const columns = [
 
 const currencyFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 })
 
+function getTodayDateString() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const day = String(now.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 export default function OwnerExpensesPage() {
   const [filters, setFilters] = useState({
     dateFrom: defaultDateFrom,
@@ -56,7 +64,7 @@ export default function OwnerExpensesPage() {
     department: "Ishlab chiqarish",
     amount: "",
     status: "Tasdiq kutmoqda",
-    date: new Date().toISOString().split("T")[0],
+    date: getTodayDateString(),
     employeeName: "",
   })
   const [records, setRecords] = useState<Expense[]>([])
@@ -297,7 +305,7 @@ export default function OwnerExpensesPage() {
             department: "Ishlab chiqarish",
             amount: "",
             status: "Tasdiq kutmoqda",
-            date: new Date().toISOString().split("T")[0],
+            date: getTodayDateString(),
             employeeName: "",
           })
           setSubmitError(null)
@@ -336,7 +344,7 @@ export default function OwnerExpensesPage() {
                 department: "Ishlab chiqarish",
                 amount: "",
                 status: "Tasdiq kutmoqda",
-                date: new Date().toISOString().split("T")[0],
+                date: getTodayDateString(),
                 employeeName: "",
               })
               setEmployeeError(null)
@@ -402,7 +410,6 @@ export default function OwnerExpensesPage() {
               required
             />
           </div>
-         
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Sana</label>
             <input
@@ -431,7 +438,7 @@ export default function OwnerExpensesPage() {
                   department: "Ishlab chiqarish",
                   amount: "",
                   status: "Tasdiq kutmoqda",
-                  date: new Date().toISOString().split("T")[0],
+                  date: getTodayDateString(),
                   employeeName: "",
                 })
                 setSubmitError(null)

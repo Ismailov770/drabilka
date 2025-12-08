@@ -47,6 +47,14 @@ type Employee = {
   baseSalary: number
 }
 
+function getTodayDateString() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const day = String(now.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 const today = new Date()
 const currentYear = today.getFullYear()
 const defaultDateFrom = ""
@@ -66,7 +74,7 @@ export default function OwnerExpensesPage() {
     department: "Ishlab chiqarish",
     amount: "",
     status: "Tasdiq kutmoqda",
-    date: new Date().toISOString().split("T")[0],
+    date: getTodayDateString(),
     employeeName: "",
   })
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -308,7 +316,7 @@ export default function OwnerExpensesPage() {
             department: "Ishlab chiqarish",
             amount: "",
             status: "Tasdiq kutmoqda",
-            date: new Date().toISOString().split("T")[0],
+            date: getTodayDateString(),
             employeeName: "",
           })
           setEmployeeError(null)
@@ -349,7 +357,7 @@ export default function OwnerExpensesPage() {
                 department: "Ishlab chiqarish",
                 amount: "",
                 status: "Tasdiq kutmoqda",
-                date: new Date().toISOString().split("T")[0],
+                date: getTodayDateString(),
                 employeeName: "",
               })
               setEmployeeError(null)
@@ -442,7 +450,7 @@ export default function OwnerExpensesPage() {
                   department: "Ishlab chiqarish",
                   amount: "",
                   status: "Tasdiq kutmoqda",
-                  date: new Date().toISOString().split("T")[0],
+                  date: getTodayDateString(),
                   employeeName: "",
                 })
                 setEmployeeError(null)

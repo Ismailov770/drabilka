@@ -110,6 +110,14 @@ const currentYear = today.getFullYear()
 const defaultDateFrom = ""
 const defaultDateTo = ""
 
+function getTodayDateString() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const day = String(now.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 export default function OwnerEquipmentFlowPage() {
   const [filters, setFilters] = useState({
     dateFrom: defaultDateFrom,
@@ -125,7 +133,7 @@ export default function OwnerEquipmentFlowPage() {
     reason: "",
     cost: "",
     photo: "",
-    loggedAt: new Date().toISOString().split("T")[0],
+    loggedAt: getTodayDateString(),
   })
   const [records, setRecords] = useState<EquipmentMovement[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -353,7 +361,7 @@ export default function OwnerEquipmentFlowPage() {
             reason: "",
             cost: "",
             photo: "",
-            loggedAt: new Date().toISOString().split("T")[0],
+            loggedAt: getTodayDateString(),
           })
           setSubmitError(null)
           setIsSubmitting(false)
@@ -432,7 +440,7 @@ export default function OwnerEquipmentFlowPage() {
                 reason: "",
                 cost: "",
                 photo: "",
-                loggedAt: new Date().toISOString().split("T")[0],
+                loggedAt: getTodayDateString(),
               })
               setPhotoNames([])
               setPhotoPreviewUrls([])

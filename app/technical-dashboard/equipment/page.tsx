@@ -6,6 +6,14 @@ import { Modal } from "@/components/modal"
 import { FileDropzone } from "@/components/file-dropzone"
 import { useState } from "react"
 
+function getTodayDateString() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const day = String(now.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 export default function EquipmentPage() {
   const [showAddEquipment, setShowAddEquipment] = useState(false)
   const [photoName, setPhotoName] = useState("")
@@ -115,7 +123,7 @@ export default function EquipmentPage() {
             <label className="block text-sm font-medium text-[#0F172A] mb-2">Purchase Date</label>
             <input
               type="date"
-              defaultValue={new Date().toISOString().split("T")[0]}
+              defaultValue={getTodayDateString()}
               className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
             />
           </div>

@@ -179,8 +179,13 @@ export default function OwnerDriverFuelPage() {
           if (dateSource) {
             const d = new Date(dateSource)
             if (!Number.isNaN(d.getTime())) {
-              date = d.toISOString().slice(0, 10)
-              time = d.toTimeString().slice(0, 5)
+              const year = d.getFullYear()
+              const month = String(d.getMonth() + 1).padStart(2, "0")
+              const day = String(d.getDate()).padStart(2, "0")
+              const hours = String(d.getHours()).padStart(2, "0")
+              const minutes = String(d.getMinutes()).padStart(2, "0")
+              date = `${year}-${month}-${day}`
+              time = `${hours}:${minutes}`
             }
           }
 
