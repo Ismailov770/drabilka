@@ -30,6 +30,7 @@ export function SidebarNav({ role, items, onNavigate }: SidebarNavProps) {
   const handleLogout = () => {
     if (typeof window !== "undefined") {
       window.localStorage.removeItem("authToken")
+      window.localStorage.removeItem("refreshToken")
       window.localStorage.removeItem("authUser")
       window.localStorage.removeItem("userRole")
       window.localStorage.removeItem("userLanguage")

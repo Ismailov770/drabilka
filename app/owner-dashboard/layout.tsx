@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { SidebarNav } from "@/components/sidebar-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { getHomePathForRole, getStoredAuth, isRoleAllowed } from "@/styles/lib/auth"
 import {
   LayoutDashboard,
   Factory,
@@ -28,12 +29,22 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
 
   useEffect(() => {
-    const role = localStorage.getItem("userRole")
-    if (role !== "owner") {
+    const { token, role } = getStoredAuth()
+
+    if (!token || !role) {
       router.push("/")
-    } else {
-      setIsAuthed(true)
+      return
     }
+
+    const requiredRole = "owner"
+
+    if (!isRoleAllowed(requiredRole, role)) {
+      const homePath = getHomePathForRole(role)
+      router.push(homePath || "/")
+      return
+    }
+
+    setIsAuthed(true)
   }, [router])
 
   if (!isAuthed) return null

@@ -5,18 +5,29 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { getHomePathForRole, getStoredAuth, isRoleAllowed } from "@/styles/lib/auth"
 
 export default function DriverLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [isAuthed, setIsAuthed] = useState(false)
 
   useEffect(() => {
-    const role = localStorage.getItem("userRole")
-    if (role !== "driver") {
+    const { token, role } = getStoredAuth()
+
+    if (!token || !role) {
       router.push("/")
-    } else {
-      setIsAuthed(true)
+      return
     }
+
+    const requiredRole = "driver"
+
+    if (!isRoleAllowed(requiredRole, role)) {
+      const homePath = getHomePathForRole(role)
+      router.push(homePath || "/")
+      return
+    }
+
+    setIsAuthed(true)
   }, [router])
 
   if (!isAuthed) return null

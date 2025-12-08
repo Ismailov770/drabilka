@@ -4,6 +4,7 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ApiError, post } from "@/styles/lib/api"
+import { getHomePathForRole } from "@/styles/lib/auth"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 const UZBEK_CONTENT = {
@@ -39,34 +40,72 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const response = await post<{
-        user: {
-          id: string
-          username: string
-          role: string
-          name: string
-          language?: string
-        }
-        token: string
-      }>("/auth/login", {
+      const response = await post<any>("/auth/login", {
         username,
         password,
       })
 
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("authToken", response.token)
-        window.localStorage.setItem("authUser", JSON.stringify(response.user))
-        window.localStorage.setItem("userRole", response.user.role)
-        window.localStorage.setItem("userLanguage", response.user.language || "uz")
+      const raw: any = response as any
+      const accessToken: string | null =
+        (raw && (raw.accessToken as string | undefined)) ||
+        (raw && (raw.token as string | undefined)) ||
+        (raw && raw.data && (raw.data.accessToken as string | undefined)) ||
+        null
+      const refreshToken: string | null =
+        (raw && (raw.refreshToken as string | undefined)) ||
+        (raw && raw.data && (raw.data.refreshToken as string | undefined)) ||
+        null
+      const role: string | null =
+        (raw && (raw.role as string | undefined)) ||
+        (raw && raw.user && (raw.user.role as string | undefined)) ||
+        null
+      const user = (raw && raw.user) || null
+      const language: string =
+        (user && (user.language as string | undefined)) ||
+        (raw && (raw.language as string | undefined)) ||
+        "uz"
+
+      if (!accessToken) {
+        setError("Kirishda xatolik yuz berdi. Token olinmadi.")
+        return
       }
 
-      router.push(`/${response.user.role}-dashboard`)
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("authToken", accessToken)
+        if (refreshToken) {
+          window.localStorage.setItem("refreshToken", refreshToken)
+        }
+        if (user) {
+          window.localStorage.setItem("authUser", JSON.stringify(user))
+        }
+        if (role) {
+          window.localStorage.setItem("userRole", role)
+          window.sessionStorage.setItem("userRole", role)
+        }
+        if (language) {
+          window.localStorage.setItem("userLanguage", language)
+        }
+      }
+
+      const homePath = getHomePathForRole(role)
+
+      if (!role || !homePath) {
+        setError("Bu login uchun rol aniqlanmadi. Iltimos, administrator bilan bog'laning.")
+        return
+      }
+
+      router.push(homePath)
     } catch (err: any) {
       if (err instanceof ApiError) {
-        const backendMessage = (err.data && (err.data as any).message) || err.message || "Kirishda xatolik yuz berdi"
-        setError(backendMessage)
+        if (err.status === 400 || err.status === 401 || err.status === 403) {
+          setError("Login yoki parol noto'g'ri. Iltimos, qayta tekshirib ko'ring.")
+        } else {
+          const backendMessage =
+            (err.data && (err.data as any).message) || err.message || "Kirishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring."
+          setError(backendMessage)
+        }
       } else {
-        setError("Kirishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+        setError("Tarmoq xatosi yoki serverga ulanish imkoni yo'q.")
       }
     } finally {
       setIsLoading(false)
