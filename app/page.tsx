@@ -169,10 +169,6 @@ export default function LoginPage() {
             )}
           </form>
 
-          {/* Footer */}
-          <div className="mt-6 text-center text-xs text-slate-500 border-t border-slate-100 pt-4">
-            <p>{UZBEK_CONTENT.demo}</p>
-          </div>
         </div>
       </div>
     </div>
