@@ -169,9 +169,10 @@ export default function OwnerProductFlowPage() {
               onChange={(product) => setFilters((prev) => ({ ...prev, product }))}
               options={[
                 { value: "all", label: "Barchasi" },
-                { value: "M400", label: "M400" },
-                { value: "M500", label: "M500" },
-                { value: "Sul'fatge chidamli", label: "Sul'fatge chidamli" },
+                { value: "Shagal", label: "Shagal" },
+                { value: "Qum", label: "Qum" },
+                { value: "SHibyon", label: "SHibyon" },
+                { value: "Kampot", label: "Kampot" },
               ]}
             />
           </div>

@@ -158,9 +158,10 @@ export default function OwnerProductionPage() {
               onChange={(product) => setFilters((prev) => ({ ...prev, product }))}
               options={[
                 { value: "all", label: "Barchasi" },
-                { value: "M400", label: "M400" },
-                { value: "M500", label: "M500" },
-                { value: "Sul'fatge chidamli", label: "Sul'fatge chidamli" },
+                { value: "Shagal", label: "Shagal" },
+                { value: "Qum", label: "Qum" },
+                { value: "SHibyon", label: "Shibyon" },
+                { value: "Kampot", label: "Kampot" },
               ]}
             />
           </div>
@@ -171,7 +172,6 @@ export default function OwnerProductionPage() {
               onChange={(shift) => setFilters((prev) => ({ ...prev, shift }))}
               options={[
                 { value: "all", label: "Barchasi" },
-                { value: "MORNING", label: "Tonggi" },
                 { value: "DAY", label: "Kunduzgi" },
                 { value: "NIGHT", label: "Kechgi" },
               ]}

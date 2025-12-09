@@ -58,7 +58,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
       children: [
         { label: "Chiqarilgan Mahsulot", href: "/owner-dashboard/production", icon: <Boxes className="w-4 h-4" /> },
         {
-          label: "Mahsulot Kirim/Chiqim",
+          label: "Mahsulot Kirim",
           href: "/owner-dashboard/product-flow",
           icon: <Repeat2 className="w-4 h-4" />,
         },
