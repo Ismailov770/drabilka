@@ -649,8 +649,8 @@ export default function CashierPayrollPage() {
               !paymentsError &&
               paymentsByPayrollId[openPaymentsPayrollId] &&
               paymentsByPayrollId[openPaymentsPayrollId].length > 0 && (
-                <div className="border border-[#E2E8F0] rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
+                <div className="border border-[#E2E8F0] rounded-lg max-h-[60vh] overflow-x-auto overflow-y-auto">
+                  <table className="min-w-full text-sm">
                     <thead className="bg-[#F8FAFC] text-left">
                       <tr>
                         <th className="px-3 py-2 font-semibold text-[#0F172A]">To'lov sanasi</th>

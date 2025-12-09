@@ -1,13 +1,11 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { StatCard } from "@/components/stat-card"
+import { useEffect, useState } from "react"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/button"
 
 import { Modal } from "@/components/modal"
 import { SelectField } from "@/components/select-field"
-import { CreditCard, Hourglass, CheckCircle2 } from "lucide-react"
 import { ApiError, get, post } from "@/styles/lib/api"
 import { getStoredRole } from "@/styles/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -248,26 +246,6 @@ export default function OwnerDebtsPage() {
     }
   }, [])
 
-  const grouping = useMemo(() => {
-    const map = new Map<string, { totalDue: number; outstanding: number; count: number }>()
-    for (const d of debts) {
-      const cur = map.get(d.company) || { totalDue: 0, outstanding: 0, count: 0 }
-      cur.totalDue += d.amountDue
-      cur.outstanding += d.outstanding
-      cur.count += 1
-      map.set(d.company, cur)
-    }
-    return Array.from(map.entries()).map(([company, data]) => ({ company, ...data }))
-  }, [debts])
-
-  const totals = useMemo(() => {
-    const totalAmount = debts.reduce((sum, d) => sum + d.amountDue, 0)
-    const totalOutstanding = debts.reduce((sum, d) => sum + d.outstanding, 0)
-    const paid = totalAmount - totalOutstanding
-    return { totalAmount, totalOutstanding, paid }
-  }, [debts])
-
-
   const openPayModal = (row: Debt) => {
     setSelectedDebt(row)
     setPayAmount("")
@@ -463,27 +441,6 @@ export default function OwnerDebtsPage() {
         <div className="flex flex-wrap items-center gap-2" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard
-          label="Umumiy qarz"
-          value={`${totals.totalAmount.toLocaleString()} so'm`}
-          icon={<CreditCard className="w-5 h-5" />}
-          color="orange"
-        />
-        <StatCard
-          label="Qolgan qarz"
-          value={`${totals.totalOutstanding.toLocaleString()} so'm`}
-          icon={<Hourglass className="w-5 h-5" />}
-          color="red"
-        />
-        <StatCard
-          label="To'langan"
-          value={`${totals.paid.toLocaleString()} so'm`}
-          icon={<CheckCircle2 className="w-5 h-5" />}
-          color="green"
-        />
-      </div>
-
       <div className="bg-card rounded-2xl p-6 card-shadow-lg border border-border">
         <div className="flex flex-col gap-1 mb-4">
           <h2 className="text-lg font-semibold text-foreground">Qarzlar ro'yxati</h2>
@@ -538,29 +495,6 @@ export default function OwnerDebtsPage() {
           )}
         />
       </div>
-
-      <div className="bg-card rounded-2xl p-6 card-shadow-lg border border-border">
-        <div className="flex flex-col gap-1 mb-4">
-          <h2 className="text-lg font-semibold text-foreground">Kompaniyalar bo'yicha</h2>
-          <p className="text-sm text-muted-foreground">Qarzlar mijoz kompaniyalar bo'yicha guruhlangan ko'rinishi.</p>
-        </div>
-
-        <DataTable
-          columns={[
-            { key: "company", label: "Kompaniya" },
-            { key: "count", label: "Qaydlar soni" },
-            { key: "totalDue", label: "Umumiy qarz (so'm)" },
-            { key: "outstanding", label: "Qolgan qarz (so'm)" },
-          ]}
-          data={grouping.map((g) => ({
-            company: g.company,
-            count: g.count,
-            totalDue: `${g.totalDue.toLocaleString()} so'm`,
-            outstanding: `${g.outstanding.toLocaleString()} so'm`,
-          }))}
-        />
-      </div>
-
 
       <Modal
         title={selectedDebt ? `Qarz bo'yicha to'lovlar - ${selectedDebt.company} / ${selectedDebt.saleId}` : "To'lovni yozish"}
