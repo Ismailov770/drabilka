@@ -9,7 +9,7 @@ import { Modal } from "@/components/modal"
 import { SelectField } from "@/components/select-field"
 import { CreditCard, Hourglass, CheckCircle2 } from "lucide-react"
 import { ApiError, get, post } from "@/styles/lib/api"
-import { DebtPaymentHistoryRow } from "@/components/debt-payment-history-row"
+import { getStoredRole } from "@/styles/lib/auth"
 
 
 type Debt = {
@@ -39,7 +39,7 @@ export default function OwnerDebtsPage() {
   const [payModalOpen, setPayModalOpen] = useState(false)
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null)
   const [payAmount, setPayAmount] = useState<number | "">("")
-  const [payType, setPayType] = useState("Cash")
+  const [payType, setPayType] = useState<"Naqd" | "Click" | "Qarzga" | "">("Naqd")
   const [isPaying, setIsPaying] = useState(false)
   const [modalError, setModalError] = useState<string | null>(null)
   const [payComment, setPayComment] = useState("")
@@ -56,6 +56,7 @@ export default function OwnerDebtsPage() {
   const [line, setLine] = useState<"" | "A" | "B">("")
   const [lineTouched, setLineTouched] = useState(false)
   const [note, setNote] = useState("")
+  const [currentRole, setCurrentRole] = useState<string | null>(null)
 
   const numberFormatter = new Intl.NumberFormat("uz-UZ")
   const isWeightValid = typeof weight === "number" && weight > 0
@@ -72,6 +73,15 @@ export default function OwnerDebtsPage() {
     !!carNumber &&
     !!clientPhone &&
     !!debtorName
+
+  useEffect(() => {
+    const role = getStoredRole()
+    setCurrentRole(role)
+  }, [])
+
+  const normalizedRole = currentRole ? currentRole.toUpperCase() : null
+  const isCashier = normalizedRole === "CASHIER"
+  const isOwner = normalizedRole === "OWNER"
 
   const formatUzbekPhone = (value: string) => {
     const digits = value.replace(/\D/g, "")
@@ -176,7 +186,7 @@ export default function OwnerDebtsPage() {
   const openPayModal = (row: Debt) => {
     setSelectedDebt(row)
     setPayAmount("")
-    setPayType("Cash")
+    setPayType("Naqd")
     setModalError(null)
     setPayComment("")
     setPayModalOpen(true)
@@ -242,6 +252,11 @@ export default function OwnerDebtsPage() {
       return
     }
 
+    if (!isCashier) {
+      setCreateError("Faqat kassir savdo yaratishi mumkin.")
+      return
+    }
+
     const weightValue = isWeightValid ? weight : 0
     const priceValue = totalPriceRounded
 
@@ -300,7 +315,7 @@ export default function OwnerDebtsPage() {
     const lastInfo = last
       ? `${last.amount.toLocaleString()} so'm (${last.at})`
       : "To'lovlar hali mavjud emas"
-    const lastBy = last?.createdBy || "—"
+    const lastBy = last?.createdBy ?? "—"
 
     return {
       ...d,
@@ -316,11 +331,7 @@ export default function OwnerDebtsPage() {
           <h1 className="text-3xl font-semibold text-foreground">Qarzlar</h1>
           <p className="text-sm text-muted-foreground mt-1">Qarz yozuvlarini ko'rish, tahlil qilish va boshqarish.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="primary" onClick={openCreateModal}>
-            Yangi qarz
-          </Button>
-        </div>
+        <div className="flex flex-wrap items-center gap-2" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -374,9 +385,6 @@ export default function OwnerDebtsPage() {
                 To'lovni yozish
               </Button>
             </div>
-          )}
-          expandableRow={(row: any) => (
-            <DebtPaymentHistoryRow debtId={row.id} outstanding={row.outstanding} />
           )}
         />
       </div>
@@ -435,11 +443,10 @@ export default function OwnerDebtsPage() {
               <label className="block text-sm text-slate-700 mb-1">To'lov turi</label>
               <SelectField
                 value={payType}
-                onChange={(value) => setPayType(value)}
+                onChange={(value) => setPayType(value as "Naqd" | "Click" | "Qarzga" | "")}
                 options={[
-                  { value: "Cash", label: "Naqd" },
-                  { value: "Transfer", label: "Bank o'tkazmasi" },
-                  { value: "Credit", label: "Qarzga" },
+                  { value: "Naqd", label: "Naqd" },
+                  { value: "Click", label: "Click" },
                 ]}
               />
             </div>
@@ -632,12 +639,15 @@ export default function OwnerDebtsPage() {
           </div>
 
           {createError && <p className="text-sm text-red-600">{createError}</p>}
+          {!isCashier && (
+            <p className="text-sm text-amber-600 mt-1">Faqat kassir savdo yaratishi mumkin.</p>
+          )}
 
           <Button
             type="submit"
             variant="primary"
             className="w-full shadow-lg border rounded bg-gray-200 p-2 font-bold"
-            disabled={isCreating || !isCreateFormValid}
+            disabled={isCreating || !isCreateFormValid || !isCashier}
           >
             {isCreating ? "Saqlanmoqda..." : "Qarzni saqlash"}
           </Button>

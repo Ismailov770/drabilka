@@ -15,6 +15,7 @@ type DebtPaymentResponse = {
   createdByFullName?: string | null
   createdByUsername?: string | null
   createdByRole?: "OWNER" | "CASHIER" | string | null
+  createdBy?: string | null
 }
 
 async function getDebtPayments(debtId: string | number): Promise<DebtPaymentResponse[]> {
@@ -167,6 +168,7 @@ export function DebtPaymentHistoryRow({ debtId, outstanding }: DebtPaymentHistor
                 <th className="px-3 py-2 text-left font-medium text-slate-600">To'lovdan keyingi holat</th>
                 <th className="px-3 py-2 text-left font-medium text-slate-600">Izoh</th>
                 <th className="px-3 py-2 text-left font-medium text-slate-600">Kim tomonidan</th>
+                <th className="px-3 py-2 text-left font-medium text-slate-600">Login</th>
                 <th className="px-3 py-2 text-left font-medium text-slate-600">Rol</th>
               </tr>
             </thead>
@@ -200,6 +202,7 @@ export function DebtPaymentHistoryRow({ debtId, outstanding }: DebtPaymentHistor
                         )}
                       </div>
                     </td>
+                    <td className="px-3 py-2 text-slate-600">{p.createdByUsername || "—"}</td>
                     <td className="px-3 py-2 text-slate-600">
                       <span className={getRoleBadgeClasses(p.createdByRole)}>{roleLabel}</span>
                     </td>

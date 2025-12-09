@@ -8,7 +8,6 @@ import { StatCard } from "@/components/stat-card"
 import { CheckCircle2, CreditCard, Hourglass } from "lucide-react"
 import { SelectField } from "@/components/select-field"
 import { ApiError, get, post } from "@/styles/lib/api"
-import { DebtPaymentHistoryRow } from "@/components/debt-payment-history-row"
 
 type Debt = {
   id: string
@@ -191,9 +190,6 @@ export default function CashierDebtsPage() {
             <Button variant="outline" size="sm" onClick={() => openPayModal(row as Debt)}>
               To'lovni yozish
             </Button>
-          )}
-          expandableRow={(row: any) => (
-            <DebtPaymentHistoryRow debtId={row.id} outstanding={row.outstanding} />
           )}
         />
       </div>
