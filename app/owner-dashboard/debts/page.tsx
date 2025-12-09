@@ -10,7 +10,17 @@ import { SelectField } from "@/components/select-field"
 import { CreditCard, Hourglass, CheckCircle2 } from "lucide-react"
 import { ApiError, get, post } from "@/styles/lib/api"
 import { getStoredRole } from "@/styles/lib/auth"
+import { useToast } from "@/hooks/use-toast"
+import { Badge } from "@/components/ui/badge"
+import { Spinner } from "@/components/ui/spinner"
 
+type DebtStatus = "Open" | "Partial" | "Paid"
+
+type DebtLastPayment = {
+  amount: number
+  at: string
+  createdBy?: string | null
+} | null
 
 type Debt = {
   id: string
@@ -18,15 +28,50 @@ type Debt = {
   saleId: string
   amountDue: number
   outstanding: number
-  dueDate: string
-  status: string
+  dueDate: string | null
+  status: DebtStatus
   notes?: string
-  lastPayment?: {
-    amount: number
-    type: string | null
-    at: string
-    createdBy?: string | null
-  } | null
+  lastPayment?: DebtLastPayment
+}
+
+type DebtPaymentResponse = {
+  id: number
+  debtId: number
+  amount: number
+  date: string
+  comment?: string | null
+  statusAfterPayment: DebtStatus
+  paidAt: string
+  cumulativePaid: number
+  outstandingAfterPayment: number
+  createdByFullName?: string | null
+  createdByUsername?: string | null
+  createdByRole?: string | null
+}
+
+function formatStatusLabel(status: DebtStatus): string {
+  if (status === "Paid") return "To'langan"
+  if (status === "Partial") return "Qisman to'langan"
+  return "Ochiq"
+}
+
+function formatTime(iso: string | null | undefined): string {
+  if (!iso) return ""
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ""
+  const hours = String(d.getHours()).padStart(2, "0")
+  const minutes = String(d.getMinutes()).padStart(2, "0")
+  return `${hours}:${minutes}`
+}
+
+function getNowLocalDateTimeInputValue(): string {
+  const d = new Date()
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  const hours = String(d.getHours()).padStart(2, "0")
+  const minutes = String(d.getMinutes()).padStart(2, "0")
+  return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
 export default function OwnerDebtsPage() {
@@ -39,10 +84,13 @@ export default function OwnerDebtsPage() {
   const [payModalOpen, setPayModalOpen] = useState(false)
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null)
   const [payAmount, setPayAmount] = useState<number | "">("")
-  const [payType, setPayType] = useState<"Naqd" | "Click" | "Qarzga" | "">("Naqd")
   const [isPaying, setIsPaying] = useState(false)
   const [modalError, setModalError] = useState<string | null>(null)
   const [payComment, setPayComment] = useState("")
+  const [paidAt, setPaidAt] = useState<string>(() => getNowLocalDateTimeInputValue())
+  const [payments, setPayments] = useState<DebtPaymentResponse[] | null>(null)
+  const [isPaymentsLoading, setIsPaymentsLoading] = useState(false)
+  const [paymentsError, setPaymentsError] = useState<string | null>(null)
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
@@ -57,6 +105,8 @@ export default function OwnerDebtsPage() {
   const [lineTouched, setLineTouched] = useState(false)
   const [note, setNote] = useState("")
   const [currentRole, setCurrentRole] = useState<string | null>(null)
+
+  const { toast } = useToast()
 
   const numberFormatter = new Intl.NumberFormat("uz-UZ")
   const isWeightValid = typeof weight === "number" && weight > 0
@@ -78,6 +128,41 @@ export default function OwnerDebtsPage() {
     const role = getStoredRole()
     setCurrentRole(role)
   }, [])
+
+  useEffect(() => {
+    if (!payModalOpen || !selectedDebt) return
+
+    let cancelled = false
+
+    const fetchPayments = async () => {
+      setIsPaymentsLoading(true)
+      setPaymentsError(null)
+      try {
+        const response = await get<DebtPaymentResponse[]>(`/debts/${selectedDebt.id}/payments`)
+        if (cancelled) return
+        setPayments(response)
+      } catch (err: any) {
+        if (cancelled) return
+        if (err instanceof ApiError) {
+          const backendMessage =
+            (err.data && (err.data as any).message) || err.message || "To'lovlar tarixini yuklashda xatolik yuz berdi"
+          setPaymentsError(backendMessage)
+        } else {
+          setPaymentsError("To'lovlar tarixini yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+        }
+      } finally {
+        if (!cancelled) {
+          setIsPaymentsLoading(false)
+        }
+      }
+    }
+
+    fetchPayments()
+
+    return () => {
+      cancelled = true
+    }
+  }, [payModalOpen, selectedDebt])
 
   const normalizedRole = currentRole ? currentRole.toUpperCase() : null
   const isCashier = normalizedRole === "CASHIER"
@@ -186,14 +271,21 @@ export default function OwnerDebtsPage() {
   const openPayModal = (row: Debt) => {
     setSelectedDebt(row)
     setPayAmount("")
-    setPayType("Naqd")
     setModalError(null)
     setPayComment("")
+    setPaidAt(getNowLocalDateTimeInputValue())
+    setPayments(null)
+    setPaymentsError(null)
     setPayModalOpen(true)
   }
 
   const recordPayment = async () => {
-    if (!selectedDebt || payAmount === "") return
+    if (!selectedDebt) return
+
+    if (payAmount === "") {
+      setModalError("To'lov miqdorini kiriting.")
+      return
+    }
 
     const amount = Number(payAmount)
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -201,31 +293,68 @@ export default function OwnerDebtsPage() {
       return
     }
 
-    const paidAt = new Date().toISOString()
+    if (amount > selectedDebt.outstanding) {
+      setModalError("To'lov miqdori qolgan qarzdan oshmasligi kerak.")
+      return
+    }
+
+    const paidAtIso = paidAt ? new Date(paidAt).toISOString() : new Date().toISOString()
 
     setIsPaying(true)
     setModalError(null)
     try {
       const body = {
         amount,
-        paidAt,
-        type: payType || null,
+        paidAt: paidAtIso,
+        type: null as string | null,
         comment: payComment || null,
       }
       const response = await post<Debt | { debt?: Debt }>(`/debts/${selectedDebt.id}/payments`, body)
       const updated = (response as any).debt ?? response
 
       setDebts((prev) => prev.map((d) => (d.id === (updated as Debt).id ? (updated as Debt) : d)))
-      setPayModalOpen(false)
-      setSelectedDebt(null)
+      setSelectedDebt((prev) => (prev && prev.id === (updated as Debt).id ? (updated as Debt) : prev))
+
       setPayAmount("")
       setPayComment("")
+      setPaidAt(getNowLocalDateTimeInputValue())
+
+      try {
+        const history = await get<DebtPaymentResponse[]>(`/debts/${(updated as Debt).id}/payments`)
+        setPayments(history)
+        setPaymentsError(null)
+      } catch (err: any) {
+        if (err instanceof ApiError) {
+          const backendMessage =
+            (err.data && (err.data as any).message) || err.message || "To'lovlar tarixini yangilashda xatolik yuz berdi"
+          setPaymentsError(backendMessage)
+        } else {
+          setPaymentsError("To'lovlar tarixini yangilashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+        }
+      }
+
+      toast({
+        title: "To'lov saqlandi",
+        description: "Yangi to'lov muvaffaqiyatli yozildi.",
+      })
     } catch (err: any) {
       if (err instanceof ApiError) {
-        const backendMessage = (err.data && (err.data as any).message) || err.message || "To'lovni yozishda xatolik yuz berdi"
+        const backendMessage =
+          (err.data && (err.data as any).message) || err.message || "To'lovni yozishda xatolik yuz berdi"
         setModalError(backendMessage)
+        toast({
+          title: "Xatolik",
+          description: backendMessage,
+          variant: "destructive",
+        })
       } else {
-        setModalError("To'lovni yozishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+        const fallback = "To'lovni yozishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring."
+        setModalError(fallback)
+        toast({
+          title: "Xatolik",
+          description: fallback,
+          variant: "destructive",
+        })
       }
     } finally {
       setIsPaying(false)
@@ -363,6 +492,13 @@ export default function OwnerDebtsPage() {
           </p>
         </div>
 
+        {isLoading && (
+          <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <Spinner className="h-4 w-4" />
+            <span>Qarzlar yuklanmoqda...</span>
+          </div>
+        )}
+
         {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
         <DataTable
@@ -376,6 +512,20 @@ export default function OwnerDebtsPage() {
                 return `${value.toLocaleString()} so'm`
               }
               return value
+            }
+            if (col.key === "status") {
+              const status: DebtStatus = row.status
+              let variant: "default" | "secondary" | "destructive" | "outline" = "secondary"
+              if (status === "Paid") {
+                variant = "default"
+              } else if (status === "Open") {
+                variant = "destructive"
+              }
+
+              return <Badge variant={variant}>{formatStatusLabel(status)}</Badge>
+            }
+            if (col.key === "dueDate") {
+              return row.dueDate || "—"
             }
             return row[col.key]
           }}
@@ -413,68 +563,168 @@ export default function OwnerDebtsPage() {
 
 
       <Modal
-        title={selectedDebt ? `To'lovni yozish - ${selectedDebt.id}` : "To'lovni yozish"}
+        title={selectedDebt ? `Qarz bo'yicha to'lovlar - ${selectedDebt.company} / ${selectedDebt.saleId}` : "To'lovni yozish"}
         isOpen={payModalOpen}
-        onClose={() => setPayModalOpen(false)}
-        size="sm"
+        onClose={() => {
+          setPayModalOpen(false)
+          setSelectedDebt(null)
+        }}
+        size="lg"
       >
         {selectedDebt && (
-          <div className="space-y-4">
-            <div>
-              <div className="text-sm text-slate-500">Kompaniya</div>
-              <div className="font-semibold">{selectedDebt.company}</div>
-            </div>
-            <div>
-              <div className="text-sm text-slate-500">Qolgan qarz</div>
-              <div className="font-semibold text-red-700">{selectedDebt.outstanding.toLocaleString()} so'm</div>
-            </div>
-
-            <div>
-              <label className="block text-sm text-slate-700 mb-1">To'lov miqdori (so'm)</label>
-              <input
-                type="number"
-                value={payAmount}
-                onChange={(e) => setPayAmount(e.target.value === "" ? "" : Number(e.target.value))}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-slate-700 mb-1">To'lov turi</label>
-              <SelectField
-                value={payType}
-                onChange={(value) => setPayType(value as "Naqd" | "Click" | "Qarzga" | "")}
-                options={[
-                  { value: "Naqd", label: "Naqd" },
-                  { value: "Click", label: "Click" },
-                ]}
-              />
+          <div className="space-y-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-1">
+                <div className="text-sm text-slate-500">Kompaniya / mijoz</div>
+                <div className="font-semibold text-slate-900">{selectedDebt.company}</div>
+                <div className="text-xs text-slate-500">Sotuv / hisob-faktura: {selectedDebt.saleId}</div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                <div>
+                  <div className="text-xs text-slate-500">Umumiy qarz</div>
+                  <div className="font-semibold text-slate-900">{selectedDebt.amountDue.toLocaleString()} so'm</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500">To'langan</div>
+                  <div className="font-semibold text-emerald-700">
+                    {(selectedDebt.amountDue - selectedDebt.outstanding).toLocaleString()} so'm
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500">Qolgan qarz</div>
+                  <div className="font-semibold text-red-700">{selectedDebt.outstanding.toLocaleString()} so'm</div>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm text-slate-700 mb-1">Izoh</label>
-              <textarea
-                value={payComment}
-                onChange={(e) => setPayComment(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
-                rows={3}
-              />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-slate-900">Tarixiy to'lovlar</h3>
+                {isPaymentsLoading && (
+                  <span className="inline-flex items-center gap-2 text-xs text-slate-500">
+                    <Spinner className="h-4 w-4" /> Yuklanmoqda...
+                  </span>
+                )}
+              </div>
+
+              {paymentsError && <p className="text-xs text-red-600">{paymentsError}</p>}
+
+              {!isPaymentsLoading && !paymentsError && payments && payments.length === 0 && (
+                <p className="text-xs text-slate-500">Hozircha to'lovlar qayd etilmagan.</p>
+              )}
+
+              {!paymentsError && payments && payments.length > 0 && (
+                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                  <table className="min-w-full text-xs">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium text-slate-600">#</th>
+                        <th className="px-3 py-2 text-left font-medium text-slate-600">Sana</th>
+                        <th className="px-3 py-2 text-left font-medium text-slate-600">Vaqt</th>
+                        <th className="px-3 py-2 text-left font-medium text-slate-600">Kim tomonidan</th>
+                        <th className="px-3 py-2 text-left font-medium text-slate-600">Summa (so'm)</th>
+                        <th className="px-3 py-2 text-left font-medium text-slate-600">Jamiga to'langan (so'm)</th>
+                        <th className="px-3 py-2 text-left font-medium text-slate-600">Qolgan qarz (so'm)</th>
+                        <th className="px-3 py-2 text-left font-medium text-slate-600">Holati</th>
+                        <th className="px-3 py-2 text-left font-medium text-slate-600">Izoh</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map((p, index) => {
+                        const status: DebtStatus = p.statusAfterPayment
+                        let variant: "default" | "secondary" | "destructive" | "outline" = "secondary"
+                        if (status === "Paid") {
+                          variant = "default"
+                        } else if (status === "Open") {
+                          variant = "destructive"
+                        }
+
+                        const displayBy = p.createdByFullName || p.createdByUsername || "—"
+
+                        return (
+                          <tr key={p.id} className="border-t border-slate-100 align-top">
+                            <td className="px-3 py-2 text-slate-800">{index + 1}</td>
+                            <td className="px-3 py-2 text-slate-800">{p.date}</td>
+                            <td className="px-3 py-2 text-slate-800">{formatTime(p.paidAt)}</td>
+                            <td className="px-3 py-2 text-slate-800">{displayBy}</td>
+                            <td className="px-3 py-2 text-slate-800">{p.amount.toLocaleString()} so'm</td>
+                            <td className="px-3 py-2 text-slate-800">{p.cumulativePaid.toLocaleString()} so'm</td>
+                            <td className="px-3 py-2 text-slate-800">{p.outstandingAfterPayment.toLocaleString()} so'm</td>
+                            <td className="px-3 py-2 text-slate-800">
+                              <Badge variant={variant}>{formatStatusLabel(status)}</Badge>
+                            </td>
+                            <td className="px-3 py-2 text-slate-600">{p.comment || "—"}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
-            {modalError && <p className="text-sm text-red-600">{modalError}</p>}
+            <div className="pt-4 mt-2 border-t border-slate-200 space-y-4">
+              <h3 className="text-sm font-semibold text-slate-900">Yangi to'lovni qo'shish</h3>
 
-            <div className="flex gap-2">
-              <Button variant="primary" onClick={recordPayment} className="w-full" disabled={isPaying}>
-                Saqlash
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setPayModalOpen(false)}
-                className="w-full"
-                disabled={isPaying}
-              >
-                Bekor qilish
-              </Button>
+              <div>
+                <label className="block text-sm text-slate-700 mb-1">To'lov miqdori (so'm)</label>
+                <input
+                  type="number"
+                  value={payAmount}
+                  min={1}
+                  max={selectedDebt.outstanding}
+                  onChange={(e) => setPayAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Maksimal: {selectedDebt.outstanding.toLocaleString()} so'm
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-slate-700 mb-1">To'lov sanasi va vaqti</label>
+                <input
+                  type="datetime-local"
+                  value={paidAt}
+                  onChange={(e) => setPaidAt(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-slate-700 mb-1">Izoh (ixtiyoriy)</label>
+                <textarea
+                  value={payComment}
+                  onChange={(e) => setPayComment(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  rows={3}
+                />
+              </div>
+
+              {modalError && <p className="text-sm text-red-600">{modalError}</p>}
+
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  onClick={recordPayment}
+                  className="w-full inline-flex items-center justify-center gap-2"
+                  disabled={isPaying}
+                >
+                  {isPaying && <Spinner className="h-4 w-4" />}
+                  <span>Saqlash</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setPayModalOpen(false)
+                    setSelectedDebt(null)
+                  }}
+                  className="w-full"
+                  disabled={isPaying}
+                >
+                  Bekor qilish
+                </Button>
+              </div>
             </div>
           </div>
         )}
