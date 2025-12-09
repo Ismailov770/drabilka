@@ -138,7 +138,7 @@ export default function OwnerProductFlowPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-[#0F172A]">Mahsulot kirim/chiqimi</h1>
+        <h1 className="text-3xl font-bold text-[#0F172A]">Mahsulotlar kirimi</h1>
         <p className="text-[#64748B] mt-1">Silos va qadoqlash jarayonidagi barcha harakatlar</p>
       </div>
 

@@ -17,6 +17,8 @@ interface DriverFuelRecord {
   time: string
   distanceKm: number
   amount: number
+  fuelType?: string
+  liters?: number
   fuelGaugePhoto?: string
   speedometerPhoto?: string
 }
@@ -33,6 +35,8 @@ interface FuelEventDto {
   speedometerPhotoUrl?: string
   dateTime?: string
   createdAt?: string
+  fuelType?: string
+   liters?: number
 }
 
 interface SelectOption {
@@ -66,6 +70,8 @@ const columns = [
   { key: "driver", label: "Haydovchi", sortable: true },
   { key: "vehicle", label: "Transport", sortable: true },
   { key: "distanceKm", label: "Masofa (km)", sortable: true },
+  { key: "fuelType", label: "Yoqilg'i turi", sortable: true },
+  { key: "liters", label: "Solyarka (litr)", sortable: false },
   { key: "amount", label: "Yoqilg'i summasi (so'm)", sortable: true },
   { key: "date", label: "Sana / vaqt", sortable: true },
   { key: "fuelGaugePhoto", label: "Yoqilg'i datchigi", sortable: false },
@@ -199,6 +205,8 @@ export default function OwnerDriverFuelPage() {
             time,
             distanceKm: item.distanceKm ?? 0,
             amount: item.amount ?? 0,
+            fuelType: item.fuelType,
+            liters: item.liters,
             fuelGaugePhoto: toFullFileUrl(item.fuelGaugePhotoUrl),
             speedometerPhoto: toFullFileUrl(item.speedometerPhotoUrl),
           }
@@ -332,10 +340,38 @@ export default function OwnerDriverFuelPage() {
         <DataTable
           columns={columns}
           data={filteredRecords}
-          searchableFields={["driver", "vehicle"]}
+          searchableFields={["driver", "vehicle", "fuelType"]}
           renderCell={(row, col) => {
             if (col.key === "distanceKm") {
               return `${numberFormatter.format(row.distanceKm)} km`
+            }
+            if (col.key === "fuelType") {
+              const type = row.fuelType
+              let label = "Noma'lum"
+              let badgeClass = "bg-slate-100 text-slate-700"
+
+              if (type === "SOLYARKA") {
+                label = "Solyarka"
+                badgeClass = "bg-amber-100 text-amber-700"
+              } else if (type === "BENZIN") {
+                label = "Benzin"
+                badgeClass = "bg-emerald-100 text-emerald-700"
+              } else if (type === "GAZ") {
+                label = "Gaz"
+                badgeClass = "bg-sky-100 text-sky-700"
+              }
+
+              return (
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badgeClass}`}>
+                  {label}
+                </span>
+              )
+            }
+            if (col.key === "liters") {
+              if (row.fuelType === "SOLYARKA" && typeof row.liters === "number" && row.liters > 0) {
+                return `${numberFormatter.format(row.liters)} l`
+              }
+              return <span className="text-xs text-slate-400">—</span>
             }
             if (col.key === "amount") {
               return `${numberFormatter.format(row.amount)} so'm`

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { SidebarNav } from "@/components/sidebar-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { getHomePathForRole, getStoredAuth, isRoleAllowed } from "@/styles/lib/auth"
-import { LayoutDashboard, ShoppingCart, Receipt, Users, CreditCard, Menu } from "lucide-react"
+import { LayoutDashboard, ShoppingCart, Receipt, Users, CreditCard, Menu, Fuel } from "lucide-react"
 
 export default function CashierLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -40,6 +40,7 @@ export default function CashierLayout({ children }: { children: React.ReactNode 
     { label: "Boshqaruv paneli", href: "/cashier-dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
     { label: "Savdolar boshqaruvi", href: "/cashier-dashboard/sales", icon: <ShoppingCart className="w-5 h-5" /> },
     { label: "Rasxodlar", href: "/cashier-dashboard/expenses", icon: <Receipt className="w-5 h-5" /> },
+    { label: "Yoqilg'i (kassa)", href: "/cashier-dashboard/fuel", icon: <Fuel className="w-5 h-5" /> },
     { label: "Ish haqi", href: "/cashier-dashboard/payroll", icon: <Users className="w-5 h-5" /> },
     { label: "Qarzlar", href: "/cashier-dashboard/debts", icon: <CreditCard className="w-5 h-5" /> },
   ]

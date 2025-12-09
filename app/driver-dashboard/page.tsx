@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/button"
 import { FileDropzone } from "@/components/file-dropzone"
+import { SelectField } from "@/components/select-field"
 import { ApiError, post } from "@/styles/lib/api"
 import { useEffect, useState } from "react"
 
@@ -10,6 +11,8 @@ export default function DriverDashboard() {
   const [fuelGaugePhotoName, setFuelGaugePhotoName] = useState("")
   const [distance, setDistance] = useState("")
   const [vehiclePlateNumber, setVehiclePlateNumber] = useState("")
+  const [fuelType, setFuelType] = useState<"SOLYARKA" | "GAZ" | "BENZIN">("SOLYARKA")
+  const [dieselLiters, setDieselLiters] = useState("")
   const [speedometerPhotoName, setSpeedometerPhotoName] = useState("")
   const [fuelGaugeFile, setFuelGaugeFile] = useState<File | null>(null)
   const [speedometerFile, setSpeedometerFile] = useState<File | null>(null)
@@ -62,10 +65,23 @@ export default function DriverDashboard() {
             e.preventDefault()
             setError(null)
 
-            if (!fuelAmount || !distance || !vehiclePlateNumber.trim() || !fuelGaugeFile || !speedometerFile) {
+            // umumiy majburiy maydonlar
+            if (!distance || !vehiclePlateNumber.trim() || !fuelGaugeFile || !speedometerFile) {
               alert(
-                "Iltimos, summa, yurgan masofa, transport raqami, yoqilg'i datchigi va speedometr suratlarini kiriting",
+                "Iltimos, yurgan masofa, transport raqami, yoqilg'i datchigi va speedometr suratlarini kiriting",
               )
+              return
+            }
+
+            // summa faqat BENZIN va GAZ uchun kerak
+            if (fuelType !== "SOLYARKA" && !fuelAmount) {
+              alert("Iltimos, yoqilg'i summasini kiriting")
+              return
+            }
+
+            // solyarka uchun litr majburiy
+            if (fuelType === "SOLYARKA" && !dieselLiters) {
+              alert("Iltimos, solyarka uchun litr miqdorini kiriting")
               return
             }
 
@@ -85,11 +101,13 @@ export default function DriverDashboard() {
               const speedometerUrl = urls[1]
 
               await post("/driver/fuel-records", {
-                amount: Number(fuelAmount) || 0,
+                amount: fuelType === "SOLYARKA" ? 0 : Number(fuelAmount) || 0,
                 distanceKm: Number(distance) || 0,
                 vehiclePlateNumber: vehiclePlateNumber.trim(),
                 fuelGaugePhotoName: fuelGaugeUrl,
                 speedometerPhotoName: speedometerUrl,
+                fuelType,
+                liters: fuelType === "SOLYARKA" ? Number(dieselLiters) || 0 : undefined,
               })
 
               alert("Yangi yoqilg'i hodisasi saqlandi")
@@ -97,6 +115,8 @@ export default function DriverDashboard() {
               setFuelAmount("")
               setDistance("")
               setVehiclePlateNumber("")
+              setFuelType("SOLYARKA")
+              setDieselLiters("")
               setFuelGaugePhotoName("")
               setSpeedometerPhotoName("")
               setFuelGaugeFile(null)
@@ -113,17 +133,53 @@ export default function DriverDashboard() {
             }
           }}
         >
+          {fuelType !== "SOLYARKA" && (
+            <div>
+              <label className="block text-sm font-medium text-[#0F172A] mb-2">Yoqilg'i summasi (so'm)</label>
+              <input
+                type="number"
+                value={fuelAmount}
+                onChange={(e) => setFuelAmount(e.target.value)}
+                placeholder="0"
+                className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
+                required
+              />
+            </div>
+          )}
           <div>
-            <label className="block text-sm font-medium text-[#0F172A] mb-2">Yoqilg'i summasi (so'm)</label>
-            <input
-              type="number"
-              value={fuelAmount}
-              onChange={(e) => setFuelAmount(e.target.value)}
-              placeholder="0"
-              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
-              required
+            <label className="block text-sm font-medium text-[#0F172A] mb-2">Yoqilg'i turi</label>
+            <SelectField
+              value={fuelType}
+              onChange={(value) => {
+                const v = value as "SOLYARKA" | "GAZ" | "BENZIN"
+                setFuelType(v)
+                // agar solyarka tanlansa, oldingi summani tozalaymiz
+                if (v === "SOLYARKA") {
+                  setFuelAmount("")
+                }
+              }}
+              options={[
+                { value: "SOLYARKA", label: "Solyarka" },
+                { value: "BENZIN", label: "Benzin" },
+                { value: "GAZ", label: "Gaz" },
+              ]}
             />
           </div>
+          {fuelType === "SOLYARKA" && (
+            <div>
+              <label className="block text-sm font-medium text-[#0F172A] mb-2">Solyarka miqdori (litr)</label>
+              <input
+                type="number"
+                value={dieselLiters}
+                onChange={(e) => setDieselLiters(e.target.value)}
+                placeholder="0"
+                className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
+                min="0"
+                step="0.01"
+                required
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-[#0F172A] mb-2">Yurgan masofa (km)</label>
             <input

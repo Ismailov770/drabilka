@@ -308,6 +308,8 @@ DriverFuelRecord {
   time: string         // "HH:MM"
   distanceKm: number
   amount: number       // сумма топлива в сумах
+  fuelType: "SOLYARKA" | "BENZIN" | "GAZ" // тип топлива, выбранный водителем
+  liters?: number      // количество литров ТОЛЬКО для SOLYARKA, может быть undefined для BENZIN/GAZ
   fuelGaugePhoto?: string
   speedometerPhoto?: string
 }
@@ -325,9 +327,16 @@ DriverFuelRecord {
     "amount": 850000,
     "dateTime": "2024-02-19T09:30:00Z",
     "fuelGaugePhotoName": "gauge_240219_01.jpg",
-    "speedometerPhotoName": "speed_240219_01.jpg"
+    "speedometerPhotoName": "speed_240219_01.jpg",
+    "fuelType": "SOLYARKA",
+    "liters": 50.5
   }
   ```
+
+  Где:
+
+  - `fuelType` — обязательное поле, одно из значений: `"SOLYARKA"`, `"BENZIN"`, `"GAZ"`.
+  - `liters` — **обязательное** поле, когда `fuelType = "SOLYARKA"`, и **опускается** (или может быть `null`), когда топливо `BENZIN` или `GAZ`.
 
 - Backend может определять водителя по токену (`username`), а не по полю в теле.
 - **Ответ 201**: `{ "record": DriverFuelRecord }`.
@@ -592,7 +601,97 @@ DriverIncident {
 
 - `GET /driver/incidents`
 - `POST /driver/incidents`
- 
+
+### 3.10. Кассовый учёт солярки (FuelStock)
+
+Новый модуль для страницы кассира `/cashier-dashboard/fuel` и просмотра статистики владельцем.
+
+#### Модель остатка солярки
+
+```ts
+FuelStockBalance {
+  dieselLiters: number // текущий остаток солярки по кассе, может быть отрицательным
+}
+```
+
+#### Модель операции по топливу кассы
+
+```ts
+FuelStockOperation {
+  id: string
+  dateTime: string       // ISO-дата/время операции
+  driverName: string     // ФИО или username водителя
+  vehiclePlate?: string  // гос. номер транспорта
+  fuelType: "SOLYARKA" | "BENZIN" | "GAZ"
+  liters?: number        // для SOLYARKA – обязательное поле; для BENZIN/GAZ может быть опущено
+  balanceAfter?: number  // остаток солярки после операции (в литрах, может быть < 0)
+  comment?: string
+}
+```
+
+#### GET /cashier/fuel-stock
+
+- **URL**: `GET /api/cashier/fuel-stock`
+- **Роли**: `CASHIER`, `OWNER` (владелец может читать остаток)
+- **Ответ 200**:
+
+  ```json
+  {
+    "dieselLiters": -10.5
+  }
+  ```
+
+#### GET /cashier/fuel-stock/operations
+
+- **URL**: `GET /api/cashier/fuel-stock/operations`
+- **Роли**: `CASHIER`, `OWNER`
+- **Фильтры (query)**:
+  - `dateFrom`, `dateTo` — период по `dateTime` (формат `YYYY-MM-DD`).
+  - `driverName` — подстрочный поиск по имени водителя.
+  - `vehiclePlate` — подстрочный поиск по номеру машины.
+  - `fuelType` — `SOLYARKA | BENZIN | GAZ`.
+- **Ответ 200**:
+
+  ```json
+  {
+    "items": [
+      {
+        "id": "FS-001",
+        "dateTime": "2025-12-10T08:30:00Z",
+        "driverName": "Driver 1",
+        "vehiclePlate": "01A123BC",
+        "fuelType": "SOLYARKA",
+        "liters": 60,
+        "balanceAfter": -10
+      }
+    ]
+  }
+  ```
+
+#### POST /cashier/fuel-stock/operations
+
+- **URL**: `POST /api/cashier/fuel-stock/operations`
+- **Роли**: `CASHIER`
+- **Назначение**: зарегистрировать выдачу топлива водителю с кассы.
+- **Тело запроса**:
+
+  ```json
+  {
+    "driverName": "Driver 1",
+    "vehiclePlate": "01A123BC",
+    "fuelType": "SOLYARKA",
+    "liters": 60
+  }
+  ```
+
+- **Бизнес-логика**:
+  - Если `fuelType = "SOLYARKA"`, backend:
+    - берёт текущий остаток солярки в литрах;
+    - вычитает `liters` (остаток может стать отрицательным);
+    - создаёт запись `FuelStockOperation` с полем `balanceAfter`.
+  - Если `fuelType = "BENZIN"` или `"GAZ"`, backend создаёт запись `FuelStockOperation`, но **не обязан** обновлять `dieselLiters` (остаток солярки остаётся без изменений).
+  - Ответ 201: созданный объект `FuelStockOperation`.
+
 ## 4. Роли, страницы и доступ к данным
 
 Ниже — обзор того, какие разделы и сущности использует каждая роль. Backend на Java должен как минимум уметь **ограничивать доступ к данным по роли пользователя**, даже если текущий фронт пока явно не отправляет токен/роль в каждый запрос.
@@ -623,6 +722,7 @@ DriverIncident {
   - `/cashier-dashboard/expenses` — часть `Expense`.
   - `/cashier-dashboard/payroll` — просмотр `PayrollRecord` по сотрудникам.
   - `/cashier-dashboard/debts` — детализация `Debt`, регистрация частичных платежей.
+  - `/cashier-dashboard/fuel` — учёт выдачи топлива водителям и остатка солярки в литрах.
 
 - Права и ожидания:
   - Создавать `Sale` (в т.ч. кредитные с авто‑созданием `Debt`).

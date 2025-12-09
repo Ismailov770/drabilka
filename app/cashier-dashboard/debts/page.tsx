@@ -24,6 +24,7 @@ type Debt = {
   id: string
   company: string
   saleId: string
+  phone?: string | null
   amountDue: number
   outstanding: number
   dueDate: string | null
@@ -280,6 +281,7 @@ export default function CashierDebtsPage() {
     { key: "id", label: "ID", sortable: true },
     { key: "company", label: "Kompaniya / mijoz", sortable: true },
     { key: "saleId", label: "Sotuv / hisob-faktura", sortable: true },
+    { key: "phone", label: "Telefon raqami", sortable: false },
     { key: "amountDue", label: "Umumiy qarz (so'm)", sortable: true },
     { key: "outstanding", label: "Qolgan qarz (so'm)", sortable: true },
     { key: "dueDate", label: "To'lov muddati", sortable: true },
@@ -301,6 +303,7 @@ export default function CashierDebtsPage() {
 
     return {
       ...d,
+      phone: d.phone || "—",
       lastPaymentInfo: lastInfo,
       lastPaymentBy: lastBy,
     }
@@ -369,7 +372,7 @@ export default function CashierDebtsPage() {
         <DataTable
           columns={columns}
           data={debtsTableData}
-          searchableFields={["id", "company", "saleId", "notes"]}
+          searchableFields={["id", "company", "saleId", "phone", "notes"]}
           renderCell={(row, col) => {
             if (col.key === "amountDue" || col.key === "outstanding") {
               const value = row[col.key]

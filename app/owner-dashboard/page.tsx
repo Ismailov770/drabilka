@@ -54,6 +54,18 @@ const quickRanges = [
 const defaultDateFrom = ""
 const defaultDateTo = ""
 
+const salesColumns = [
+  { key: "id", label: "Savdo ID", sortable: true },
+  { key: "client", label: "Mijoz", sortable: true },
+  { key: "phone", label: "Telefon raqami", sortable: true },
+  { key: "carNumber", label: "Avto raqami", sortable: true },
+  { key: "material", label: "Mahsulot", sortable: true },
+  { key: "weight", label: "Hajm (m³)", sortable: true },
+  { key: "price", label: "Summa (so'm)", sortable: true },
+  { key: "paymentType", label: "To'lov turi", sortable: true },
+  { key: "date", label: "Sana", sortable: true },
+]
+
 export default function OwnerDashboard() {
   const [filters, setFilters] = useState({
     dateFrom: defaultDateFrom,

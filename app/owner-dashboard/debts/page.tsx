@@ -24,6 +24,7 @@ type Debt = {
   id: string
   company: string
   saleId: string
+  phone?: string | null
   amountDue: number
   outstanding: number
   dueDate: string | null
@@ -409,6 +410,7 @@ export default function OwnerDebtsPage() {
     { key: "id", label: "ID", sortable: true },
     { key: "company", label: "Kompaniya / mijoz", sortable: true },
     { key: "saleId", label: "Sotuv / hisob-faktura", sortable: true },
+    { key: "phone", label: "Telefon raqami", sortable: false },
     { key: "amountDue", label: "Umumiy qarz (so'm)", sortable: true },
     { key: "outstanding", label: "Qolgan qarz (so'm)", sortable: true },
     { key: "dueDate", label: "To'lov muddati", sortable: true },
@@ -426,6 +428,7 @@ export default function OwnerDebtsPage() {
 
     return {
       ...d,
+      phone: d.phone || "—",
       lastPaymentInfo: lastInfo,
       lastPaymentBy: lastBy,
     }
