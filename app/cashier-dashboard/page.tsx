@@ -348,15 +348,18 @@ export default function CashierDashboard() {
             e.preventDefault()
 
             try {
+              const weightNumber = Number(newWeight) || 0
+              const unitPriceNumber = Number(newPrice) || 0
+              const totalPrice = weightNumber > 0 && unitPriceNumber > 0 ? weightNumber * unitPriceNumber : 0
+
               const payload = {
                 client: newClient || "Naqd mijoz",
-                phone: "",
+                phone: "N/A",
                 material: newMaterial,
-                weight: Number(newWeight) || 0,
-                price: Number(newPrice) || 0,
-                date: new Date().toISOString().slice(0, 10),
-                employee: "Kassir",
-                carNumber: newClient || "",
+                weight: weightNumber,
+                price: totalPrice,
+                carNumber: newClient || "Noma'lum",
+                line: "A",
                 paymentType: newPaymentType,
                 note: "",
               }

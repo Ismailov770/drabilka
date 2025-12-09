@@ -42,17 +42,83 @@ export default function OwnerDebtsPage() {
   const [payType, setPayType] = useState("Cash")
   const [isPaying, setIsPaying] = useState(false)
   const [modalError, setModalError] = useState<string | null>(null)
+  const [payComment, setPayComment] = useState("")
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
-  const [createForm, setCreateForm] = useState({
-    company: "",
-    saleId: "",
-    amountDue: "",
-    dueDate: "",
-    notes: "",
-  })
+  const [debtorName, setDebtorName] = useState("")
+  const [clientPhone, setClientPhone] = useState("")
+  const [carNumber, setCarNumber] = useState("")
+  const [productType, setProductType] = useState("Shagal")
+  const [weight, setWeight] = useState<number | "">("")
+  const [unitPrice, setUnitPrice] = useState<number | "">("")
+  const [line, setLine] = useState<"" | "A" | "B">("")
+  const [lineTouched, setLineTouched] = useState(false)
+  const [note, setNote] = useState("")
+
+  const numberFormatter = new Intl.NumberFormat("uz-UZ")
+  const isWeightValid = typeof weight === "number" && weight > 0
+  const isUnitPriceValid = typeof unitPrice === "number" && unitPrice > 0
+
+  const totalPrice = isWeightValid && isUnitPriceValid ? weight * unitPrice : 0
+  const totalPriceRounded = totalPrice > 0 ? Math.round(totalPrice) : 0
+  const formattedTotalPrice = totalPriceRounded > 0 ? numberFormatter.format(totalPriceRounded) : "0"
+
+  const isCreateFormValid =
+    isWeightValid &&
+    isUnitPriceValid &&
+    !!line &&
+    !!carNumber &&
+    !!clientPhone &&
+    !!debtorName
+
+  const formatUzbekPhone = (value: string) => {
+    const digits = value.replace(/\D/g, "")
+
+    if (!digits) {
+      return ""
+    }
+
+    let numbers = digits
+    if (numbers.startsWith("998")) {
+      numbers = numbers.slice(3)
+    }
+
+    numbers = numbers.slice(0, 9)
+
+    const parts: string[] = []
+
+    if (numbers.length > 0) {
+      parts.push(numbers.slice(0, 2))
+    }
+    if (numbers.length > 2) {
+      parts.push(numbers.slice(2, 5))
+    }
+    if (numbers.length > 5) {
+      parts.push(numbers.slice(5, 7))
+    }
+    if (numbers.length > 7) {
+      parts.push(numbers.slice(7, 9))
+    }
+
+    let result = "+998"
+
+    if (parts.length > 0) {
+      result += " " + parts[0]
+    }
+    if (parts.length > 1) {
+      result += " " + parts[1]
+    }
+    if (parts.length > 2) {
+      result += " " + parts[2]
+    }
+    if (parts.length > 3) {
+      result += " " + parts[3]
+    }
+
+    return result
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -112,19 +178,29 @@ export default function OwnerDebtsPage() {
     setPayAmount("")
     setPayType("Cash")
     setModalError(null)
+    setPayComment("")
     setPayModalOpen(true)
   }
 
   const recordPayment = async () => {
     if (!selectedDebt || payAmount === "") return
+
     const amount = Number(payAmount)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setModalError("To'lov miqdori 0 dan katta bo'lishi kerak.")
+      return
+    }
+
+    const paidAt = new Date().toISOString()
+
     setIsPaying(true)
     setModalError(null)
     try {
       const body = {
         amount,
-        type: payType,
-        paidAt: new Date().toISOString(),
+        paidAt,
+        type: payType || null,
+        comment: payComment || null,
       }
       const response = await post<Debt | { debt?: Debt }>(`/debts/${selectedDebt.id}/payments`, body)
       const updated = (response as any).debt ?? response
@@ -133,6 +209,7 @@ export default function OwnerDebtsPage() {
       setPayModalOpen(false)
       setSelectedDebt(null)
       setPayAmount("")
+      setPayComment("")
     } catch (err: any) {
       if (err instanceof ApiError) {
         const backendMessage = (err.data && (err.data as any).message) || err.message || "To'lovni yozishda xatolik yuz berdi"
@@ -146,45 +223,52 @@ export default function OwnerDebtsPage() {
   }
 
   const openCreateModal = () => {
-    setCreateForm({
-      company: "",
-      saleId: "",
-      amountDue: "",
-      dueDate: "",
-      notes: "",
-    })
+    setDebtorName("")
+    setClientPhone("")
+    setCarNumber("")
+    setProductType("Shagal")
+    setWeight("")
+    setUnitPrice("")
+    setLine("")
+    setLineTouched(false)
+    setNote("")
     setCreateError(null)
     setIsCreateModalOpen(true)
   }
 
   const createDebt = async () => {
-    if (!createForm.company || !createForm.saleId || !createForm.amountDue || !createForm.dueDate) {
+    if (!isCreateFormValid) {
       setCreateError("Iltimos, barcha majburiy maydonlarni to'ldiring.")
       return
     }
 
-    const amount = Number(createForm.amountDue)
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setCreateError("Qarz summasi 0 dan katta bo'lishi kerak.")
-      return
-    }
+    const weightValue = isWeightValid ? weight : 0
+    const priceValue = totalPriceRounded
 
     setIsCreating(true)
     setCreateError(null)
 
     try {
       const body = {
-        company: createForm.company,
-        saleId: createForm.saleId,
-        amountDue: amount,
-        dueDate: createForm.dueDate,
-        notes: createForm.notes || undefined,
+        client: debtorName,
+        phone: clientPhone,
+        material: productType,
+        weight: weightValue,
+        price: priceValue,
+        carNumber,
+        line,
+        paymentType: "Qarzga",
+        note: note || "Qarzga savdo",
       }
 
-      const response = await post<Debt | { debt?: Debt }>("/debts", body)
-      const created = (response as any).debt ?? response
+      await post("/sales", body)
 
-      setDebts((prev) => [created as Debt, ...prev])
+      try {
+        const response = await get<Debt[] | { items?: Debt[] }>("/debts")
+        const items = Array.isArray(response) ? response : response.items ?? []
+        setDebts(items)
+      } catch {}
+
       setIsCreateModalOpen(false)
     } catch (err: any) {
       if (err instanceof ApiError) {
@@ -285,11 +369,15 @@ export default function OwnerDebtsPage() {
             return row[col.key]
           }}
           actions={(row: any) => (
-            <Button variant="outline" size="sm" onClick={() => openPayModal(row as Debt)}>
-              To'lovni yozish
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => openPayModal(row as Debt)}>
+                To'lovni yozish
+              </Button>
+            </div>
           )}
-          expandableRow={(row: any) => <DebtPaymentHistoryRow debtId={row.id} outstanding={row.outstanding} />}
+          expandableRow={(row: any) => (
+            <DebtPaymentHistoryRow debtId={row.id} outstanding={row.outstanding} />
+          )}
         />
       </div>
 
@@ -356,6 +444,16 @@ export default function OwnerDebtsPage() {
               />
             </div>
 
+            <div>
+              <label className="block text-sm text-slate-700 mb-1">Izoh</label>
+              <textarea
+                value={payComment}
+                onChange={(e) => setPayComment(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg"
+                rows={3}
+              />
+            </div>
+
             {modalError && <p className="text-sm text-red-600">{modalError}</p>}
 
             <div className="flex gap-2">
@@ -376,81 +474,174 @@ export default function OwnerDebtsPage() {
       </Modal>
 
       <Modal
-        title="Yangi qarz yaratish"
+        title="Yangi qarz qo'shish"
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        size="sm"
+        size="md"
       >
-        <div className="space-y-4">
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault()
+            createDebt()
+          }}
+        >
           <div>
-            <label className="block text-sm text-slate-700 mb-1">Kompaniya yoki mijoz</label>
+            <label className="block text-sm font-medium text-[#0F172A] mb-2">Avto raqami</label>
             <input
               type="text"
-              value={createForm.company}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, company: e.target.value }))}
-              className="w-full px-3 py-2 border rounded-lg"
-              placeholder="Masalan: BuildCo Ltd."
+              value={carNumber}
+              onChange={(e) => setCarNumber(e.target.value)}
+              placeholder="Avto raqami"
+              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
             />
           </div>
 
           <div>
-            <label className="block text-sm text-slate-700 mb-1">Sotuv / hisob-faktura ID</label>
+            <label className="block text-sm font-medium text-[#0F172A] mb-2">Telefon raqami</label>
             <input
-              type="text"
-              value={createForm.saleId}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, saleId: e.target.value }))}
-              className="w-full px-3 py-2 border rounded-lg"
-              placeholder="Masalan: S003"
+              type="tel"
+              value={clientPhone}
+              onChange={(e) => setClientPhone(formatUzbekPhone(e.target.value))}
+              placeholder="Masalan: +99890 123 45 67"
+              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
             />
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[#0F172A] mb-2">Mahsulot turi</label>
+              <SelectField
+                value={productType}
+                onChange={(value) => setProductType(value)}
+                options={[
+                  { value: "Shagal", label: "Shagal" },
+                  { value: "Qum", label: "Qum" },
+                  { value: "SHibyon", label: "SHibyon" },
+                  { value: "Kampot", label: "Kampot" },
+                ]}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#0F172A] mb-2">Press liniyasi</label>
+              <SelectField
+                value={line}
+                onChange={(value) => {
+                  setLine(value as "" | "A" | "B")
+                  setLineTouched(true)
+                }}
+                options={[
+                  { value: "A", label: "A liniyasi" },
+                  { value: "B", label: "B liniyasi" },
+                ]}
+                placeholder="Tanlang..."
+              />
+              {!line && lineTouched && (
+                <p className="mt-1 text-xs text-red-600">Press liniyasini tanlang</p>
+              )}
+            </div>
+          </div>
+
           <div>
-            <label className="block text-sm text-slate-700 mb-1">Umumiy qarz summasi (so'm)</label>
+            <label className="block text-sm font-medium text-[#0F172A] mb-2">Hajm (m³)</label>
             <input
               type="number"
-              value={createForm.amountDue}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, amountDue: e.target.value }))}
-              className="w-full px-3 py-2 border rounded-lg"
-              min={0}
+              value={weight}
+              onChange={(e) => {
+                const value = e.target.value
+                if (value === "") {
+                  setWeight("")
+                  return
+                }
+                const parsed = parseFloat(value)
+                setWeight(Number.isNaN(parsed) ? "" : parsed)
+              }}
+              placeholder="0"
+              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
+              step="0.001"
+              min="0"
             />
+            {weight !== "" && !isWeightValid && (
+              <p className="mt-1 text-xs text-red-600">Og'irlik 0 dan katta bo'lishi kerak</p>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm text-slate-700 mb-1">To'lov muddati</label>
+            <label className="block text-sm font-medium text-[#0F172A] mb-2">Narx (so'm / m³)</label>
             <input
-              type="date"
-              value={createForm.dueDate}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, dueDate: e.target.value }))}
-              className="w-full px-3 py-2 border rounded-lg"
+              type="number"
+              value={unitPrice}
+              onChange={(e) => {
+                const value = e.target.value
+                if (value === "") {
+                  setUnitPrice("")
+                  return
+                }
+                const parsed = parseFloat(value)
+                setUnitPrice(Number.isNaN(parsed) ? "" : parsed)
+              }}
+              placeholder="0"
+              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
+              step="1"
+              min="0"
+            />
+            {unitPrice !== "" && !isUnitPriceValid && (
+              <p className="mt-1 text-xs text-red-600">Narx 0 dan katta bo'lishi kerak</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#0F172A] mb-2">Umumiy summa (so'm)</label>
+            <input
+              type="text"
+              value={formattedTotalPrice}
+              readOnly
+              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg bg-gray-50 text-gray-700"
             />
           </div>
 
           <div>
-            <label className="block text-sm text-slate-700 mb-1">Izoh (ixtiyoriy)</label>
+            <label className="block text-sm font-medium text-[#0F172A] mb-2">To'lov turi</label>
+            <SelectField
+              value="Qarzga"
+              onChange={() => {}}
+              options={[{ value: "Qarzga", label: "Qarzga" }]}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#0F172A] mb-2">Kompaniya yoki shaxs</label>
+            <input
+              type="text"
+              value={debtorName}
+              onChange={(e) => setDebtorName(e.target.value)}
+              placeholder="Masalan: Aliyev Murod yoki BuildCo Ltd."
+              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#0F172A] mb-2">Izoh (ixtiyoriy)</label>
             <textarea
-              value={createForm.notes}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, notes: e.target.value }))}
-              className="w-full px-3 py-2 border rounded-lg"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Qo'shimcha ma'lumot"
+              className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
               rows={3}
             />
           </div>
 
           {createError && <p className="text-sm text-red-600">{createError}</p>}
 
-          <div className="flex gap-2 pt-2">
-            <Button variant="primary" onClick={createDebt} className="w-full" disabled={isCreating}>
-              {isCreating ? "Saqlanmoqda..." : "Saqlash"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setIsCreateModalOpen(false)}
-              className="w-full"
-              disabled={isCreating}
-            >
-              Bekor qilish
-            </Button>
-          </div>
-        </div>
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full shadow-lg border rounded bg-gray-200 p-2 font-bold"
+            disabled={isCreating || !isCreateFormValid}
+          >
+            {isCreating ? "Saqlanmoqda..." : "Qarzni saqlash"}
+          </Button>
+        </form>
       </Modal>
     </div>
   )

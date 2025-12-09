@@ -17,8 +17,6 @@ type DebtPaymentResponse = {
   createdByRole?: "OWNER" | "CASHIER" | string | null
 }
 
-const paymentsCache = new Map<string | number, DebtPaymentResponse[]>()
-
 async function getDebtPayments(debtId: string | number): Promise<DebtPaymentResponse[]> {
   return get<DebtPaymentResponse[]>(`/debts/${debtId}/payments`)
 }
@@ -36,10 +34,7 @@ type AuthUser = {
 }
 
 export function DebtPaymentHistoryRow({ debtId, outstanding }: DebtPaymentHistoryRowProps) {
-  const [payments, setPayments] = useState<DebtPaymentResponse[] | null>(() => {
-    const cached = paymentsCache.get(debtId)
-    return cached ?? null
-  })
+  const [payments, setPayments] = useState<DebtPaymentResponse[] | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
@@ -74,7 +69,6 @@ export function DebtPaymentHistoryRow({ debtId, outstanding }: DebtPaymentHistor
         const response = await getDebtPayments(debtId)
         if (cancelled) return
         const sorted = [...response].sort((a, b) => a.date.localeCompare(b.date))
-        paymentsCache.set(debtId, sorted)
         setPayments(sorted)
       } catch (err: any) {
         if (cancelled) return
@@ -100,16 +94,21 @@ export function DebtPaymentHistoryRow({ debtId, outstanding }: DebtPaymentHistor
   }, [debtId, payments])
 
   const handleRetry = () => {
-    paymentsCache.delete(debtId)
     setPayments(null)
   }
 
   const totalPaid = payments?.reduce((sum, p) => sum + p.amount, 0) ?? 0
 
+  const formatStatusLabel = (status: DebtPaymentResponse["statusAfterPayment"]) => {
+    if (status === "Paid") return "To'liq to'langan"
+    if (status === "Partial") return "Qisman to'langan"
+    return "Ochiq"
+  }
+
   const formatRoleLabel = (role?: string | null) => {
     if (!role) return "—"
     const normalized = role.toUpperCase()
-    if (normalized === "OWNER") return "Владелец"
+    if (normalized === "OWNER") return "Egasi"
     if (normalized === "CASHIER") return "Kassir"
     return role
   }
@@ -168,7 +167,6 @@ export function DebtPaymentHistoryRow({ debtId, outstanding }: DebtPaymentHistor
                 <th className="px-3 py-2 text-left font-medium text-slate-600">To'lovdan keyingi holat</th>
                 <th className="px-3 py-2 text-left font-medium text-slate-600">Izoh</th>
                 <th className="px-3 py-2 text-left font-medium text-slate-600">Kim tomonidan</th>
-                <th className="px-3 py-2 text-left font-medium text-slate-600">Login</th>
                 <th className="px-3 py-2 text-left font-medium text-slate-600">Rol</th>
               </tr>
             </thead>
@@ -183,16 +181,18 @@ export function DebtPaymentHistoryRow({ debtId, outstanding }: DebtPaymentHistor
 
                 const roleLabel = formatRoleLabel(p.createdByRole)
                 const isMe = isCurrentUser(p.createdByUsername)
+                const commentText = p.comment ?? "—"
+                const displayBy = p.createdByFullName || p.createdByUsername || "—"
 
                 return (
                   <tr key={p.id} className="border-t border-slate-100 align-top">
                     <td className="px-3 py-2 text-slate-800">{p.date}</td>
                     <td className="px-3 py-2 text-slate-800">{p.amount.toLocaleString()} so'm</td>
-                    <td className={`px-3 py-2 font-medium ${statusColor}`}>{p.statusAfterPayment}</td>
-                    <td className="px-3 py-2 text-slate-600">{p.comment || "—"}</td>
+                    <td className={`px-3 py-2 font-medium ${statusColor}`}>{formatStatusLabel(p.statusAfterPayment)}</td>
+                    <td className="px-3 py-2 text-slate-600">{commentText}</td>
                     <td className="px-3 py-2 text-slate-800">
                       <div className="flex items-center gap-1 flex-wrap">
-                        <span>{p.createdByFullName || "—"}</span>
+                        <span>{displayBy}</span>
                         {isMe && (
                           <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
                             Siz
@@ -200,7 +200,6 @@ export function DebtPaymentHistoryRow({ debtId, outstanding }: DebtPaymentHistor
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-slate-600">{p.createdByUsername || "—"}</td>
                     <td className="px-3 py-2 text-slate-600">
                       <span className={getRoleBadgeClasses(p.createdByRole)}>{roleLabel}</span>
                     </td>
