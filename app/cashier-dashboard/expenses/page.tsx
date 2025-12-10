@@ -47,7 +47,9 @@ function getTodayDateString() {
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, "0")
   const day = String(now.getDate()).padStart(2, "0")
-  return `${year}-${month}-${day}`
+  const hours = String(now.getHours()).padStart(2, "0")
+  const minutes = String(now.getMinutes()).padStart(2, "0")
+  return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
 export default function OwnerExpensesPage() {
@@ -410,16 +412,7 @@ export default function OwnerExpensesPage() {
               required
             />
           </div>
-          <div>
-            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Sana</label>
-            <input
-              type="date"
-              value={newExpense.date}
-              onChange={(e) => setNewExpense((prev) => ({ ...prev, date: e.target.value }))}
-              className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-              required
-            />
-          </div>
+          {/* Sana avtomatik ravishda hozirgi kundan olinadi */}
           <div className="flex gap-3 pt-4">
             <button
               type="submit"

@@ -37,7 +37,6 @@ export default function CashierLayout({ children }: { children: React.ReactNode 
 
   // Sidebar navigation items — ensure href is correct and not overwritten
   const navItems = [
-    { label: "Boshqaruv paneli", href: "/cashier-dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
     { label: "Savdolar boshqaruvi", href: "/cashier-dashboard/sales", icon: <ShoppingCart className="w-5 h-5" /> },
     { label: "Rasxodlar", href: "/cashier-dashboard/expenses", icon: <Receipt className="w-5 h-5" /> },
     { label: "Yoqilg'i (kassa)", href: "/cashier-dashboard/fuel", icon: <Fuel className="w-5 h-5" /> },

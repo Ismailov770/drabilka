@@ -90,14 +90,12 @@ export default function OwnerDriverFuelPage() {
     dateFrom: defaultDateFrom,
     dateTo: defaultDateTo,
     driver: "all",
-    vehicle: "all",
   })
   const [records, setRecords] = useState<DriverFuelRecord[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null)
   const [driverOptions, setDriverOptions] = useState<SelectOption[]>([])
-  const [vehicleOptions, setVehicleOptions] = useState<SelectOption[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -108,7 +106,6 @@ export default function OwnerDriverFuelPage() {
         if (cancelled) return
 
         const rawDrivers = (response && (response as any).drivers) || []
-        const rawVehicles = (response && (response as any).vehicles) || []
 
         const mappedDrivers: SelectOption[] = rawDrivers
           .map((d: any) => {
@@ -119,21 +116,10 @@ export default function OwnerDriverFuelPage() {
           })
           .filter((d: SelectOption | null): d is SelectOption => d !== null)
 
-        const mappedVehicles: SelectOption[] = rawVehicles
-          .map((v: any) => {
-            if (v == null || v.id == null) return null
-            const label =
-              v.name ?? v.label ?? v.plate ?? (typeof v.id === "number" ? `ID ${v.id}` : String(v.id))
-            return { id: Number(v.id), label }
-          })
-          .filter((v: SelectOption | null): v is SelectOption => v !== null)
-
         setDriverOptions(mappedDrivers)
-        setVehicleOptions(mappedVehicles)
       } catch {
         if (!cancelled) {
           setDriverOptions([])
-          setVehicleOptions([])
         }
       }
     }
@@ -157,7 +143,6 @@ export default function OwnerDriverFuelPage() {
             dateFrom: filters.dateFrom || undefined,
             dateTo: filters.dateTo || undefined,
             driverId: filters.driver === "all" ? undefined : Number(filters.driver),
-            vehicleId: filters.vehicle === "all" ? undefined : Number(filters.vehicle),
           },
         })
 
@@ -176,7 +161,7 @@ export default function OwnerDriverFuelPage() {
             item.vehiclePlateNumber && item.vehiclePlateNumber.length > 0
               ? item.vehiclePlateNumber
               : item.vehicleId != null
-                ? vehicleOptions.find((v) => v.id === item.vehicleId)?.label ?? `ID ${item.vehicleId}`
+                ? `ID ${item.vehicleId}`
                 : "-"
 
           let date = ""
@@ -234,7 +219,7 @@ export default function OwnerDriverFuelPage() {
     return () => {
       cancelled = true
     }
-  }, [filters.dateFrom, filters.dateTo, filters.driver, filters.vehicle, driverOptions, vehicleOptions])
+  }, [filters.dateFrom, filters.dateTo, filters.driver, driverOptions])
 
   const withinRange = (dateStr: string) => {
     const current = new Date(dateStr).getTime()
@@ -251,15 +236,13 @@ export default function OwnerDriverFuelPage() {
         .filter((record) => {
           const matchesDriver =
             filters.driver === "all" || (record.driverId != null && String(record.driverId) === filters.driver)
-          const matchesVehicle =
-            filters.vehicle === "all" || (record.vehicleId != null && String(record.vehicleId) === filters.vehicle)
-          return matchesDriver && matchesVehicle && withinRange(record.date)
+          return matchesDriver && withinRange(record.date)
         })
         .map((record, index) => ({
           ...record,
           order: index + 1,
         })),
-    [records, filters.driver, filters.vehicle, filters.dateFrom, filters.dateTo],
+    [records, filters.driver, filters.dateFrom, filters.dateTo],
   )
 
   return (
@@ -272,7 +255,7 @@ export default function OwnerDriverFuelPage() {
       </div>
 
       <div className="bg-white rounded-2xl p-6 card-shadow-lg border border-slate-100 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="text-sm font-semibold text-slate-900 mb-2 block">Boshlanish sanasi</label>
             <input
@@ -302,17 +285,6 @@ export default function OwnerDriverFuelPage() {
               ]}
             />
           </div>
-          <div>
-            <label className="text-sm font-semibold text-slate-900 mb-2 block">Transport</label>
-            <SelectField
-              value={filters.vehicle}
-              onChange={(vehicle) => setFilters((prev) => ({ ...prev, vehicle }))}
-              options={[
-                { value: "all", label: "Barchasi" },
-                ...vehicleOptions.map((vehicle) => ({ value: String(vehicle.id), label: vehicle.label })),
-              ]}
-            />
-          </div>
         </div>
         <div className="flex justify-end">
           <button
@@ -322,7 +294,6 @@ export default function OwnerDriverFuelPage() {
                 dateFrom: "",
                 dateTo: "",
                 driver: "all",
-                vehicle: "all",
               })
             }
             className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-sm text-slate-700 rounded-full bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 mt-2"

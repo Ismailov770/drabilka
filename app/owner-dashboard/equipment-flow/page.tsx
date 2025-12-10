@@ -122,8 +122,6 @@ export default function OwnerEquipmentFlowPage() {
   const [filters, setFilters] = useState({
     dateFrom: defaultDateFrom,
     dateTo: defaultDateTo,
-    category: "all",
-    movement: "all",
   })
   const [isAddMovementOpen, setIsAddMovementOpen] = useState(false)
   const [newMovement, setNewMovement] = useState({
@@ -194,16 +192,12 @@ export default function OwnerEquipmentFlowPage() {
   const filteredRecords = useMemo(
     () =>
       records
-        .filter((record) => {
-          const matchesCategory = filters.category === "all" || record.category === filters.category
-          const matchesMovement = filters.movement === "all" || record.movement === filters.movement
-          return matchesCategory && matchesMovement && withinRange(record.loggedAt)
-        })
+        .filter((record) => withinRange(record.loggedAt))
         .map((record) => ({
           ...record,
           photo: record.photoUrl,
         })),
-    [records, filters.category, filters.movement, filters.dateFrom, filters.dateTo],
+    [records, filters.dateFrom, filters.dateTo],
   )
 
   return (
@@ -214,7 +208,7 @@ export default function OwnerEquipmentFlowPage() {
       </div>
 
       <div className="bg-white rounded-lg p-6 card-shadow space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Boshlanish sanasi</label>
             <input
@@ -233,31 +227,6 @@ export default function OwnerEquipmentFlowPage() {
               className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
             />
           </div>
-          <div>
-            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Kategoriya</label>
-            <SelectField
-              value={filters.category}
-              onChange={(category) => setFilters((prev) => ({ ...prev, category }))}
-              options={[
-                { value: "all", label: "Barchasi" },
-                { value: "Asosiy texnika", label: "Asosiy texnika" },
-                { value: "Yordamchi texnika", label: "Yordamchi texnika" },
-                { value: "Energiya bloki", label: "Energiya bloki" },
-              ]}
-            />
-          </div>
-          <div>
-            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Yo'nalish</label>
-            <SelectField
-              value={filters.movement}
-              onChange={(movement) => setFilters((prev) => ({ ...prev, movement }))}
-              options={[
-                { value: "all", label: "Barchasi" },
-                { value: "Kirim", label: "Kirim" },
-                { value: "Chiqim", label: "Chiqim" },
-              ]}
-            />
-          </div>
         </div>
         <div className="flex justify-end">
           <button
@@ -266,8 +235,6 @@ export default function OwnerEquipmentFlowPage() {
               setFilters({
                 dateFrom: "",
                 dateTo: "",
-                category: "all",
-                movement: "all",
               })
             }
             className="px-4 py-2 border border-[#E2E8F0] rounded-lg text-sm text-[#0F172A] hover:bg-[#F1F5F9] mt-2"
