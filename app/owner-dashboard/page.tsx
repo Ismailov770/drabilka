@@ -50,6 +50,8 @@ type CashReport = {
   openingCash: number
   cashFromSalesNaqd: number
   cashFromDebtsNaqd: number
+  driverFuelExpenses: number | null
+  technicianExpenses: number | null
   expensesGeneral: number
   expensesPayroll: number
   cashExpenses: number
@@ -345,6 +347,8 @@ export default function OwnerDashboard() {
   const cashFromSalesNaqd = cashReport?.cashFromSalesNaqd ?? 0
   const cashFromDebtsNaqd = cashReport?.cashFromDebtsNaqd ?? 0
   const expensesGeneral = cashReport?.expensesGeneral ?? 0
+  const driverFuelExpenses = cashReport?.driverFuelExpenses ?? 0
+  const technicianExpenses = cashReport?.technicianExpenses ?? 0
   const expensesPayroll = cashReport?.expensesPayroll ?? 0
   const cashExpenses = cashReport?.cashExpenses ?? 0
   const openingCash = cashReport?.openingCash ?? (openingCashInput ? Number(openingCashInput) || 0 : 0)
@@ -479,6 +483,18 @@ export default function OwnerDashboard() {
                 </p>
               </div>
               <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                <p className="text-xs font-medium text-slate-500">Haydovchi yoqilg'i xarajatlari (benzin/gaz)</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {currencyFormatter.format(driverFuelExpenses)} so'm
+                </p>
+              </div>
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                <p className="text-xs font-medium text-slate-500">Texnik xarajatlari (ta'mir)</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {currencyFormatter.format(technicianExpenses)} so'm
+                </p>
+              </div>
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">
                 <p className="text-xs font-medium text-slate-500">Ish haqi (kassadan)</p>
                 <p className="mt-1 text-xl font-semibold text-slate-900">
                   {currencyFormatter.format(expensesPayroll)} so'm
@@ -487,7 +503,7 @@ export default function OwnerDashboard() {
               <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">
                 <p className="text-xs font-medium text-slate-500">Umumiy kassa xarajatlari</p>
                 <p className="mt-1 text-xl font-semibold text-slate-900">
-                  {currencyFormatter.format(cashExpenses)} so'm
+                  {currencyFormatter.format(expensesGeneral)} so'm
                 </p>
               </div>
               <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">

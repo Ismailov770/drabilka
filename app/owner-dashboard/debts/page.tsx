@@ -105,11 +105,28 @@ export default function OwnerDebtsPage() {
   const [note, setNote] = useState("")
   const [currentRole, setCurrentRole] = useState<string | null>(null)
 
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
+
   const { toast } = useToast()
 
   const numberFormatter = new Intl.NumberFormat("uz-UZ")
   const isWeightValid = typeof weight === "number" && weight > 0
   const isUnitPriceValid = typeof unitPrice === "number" && unitPrice > 0
+
+  const quickRanges = [
+    { label: "7 kun", days: 7 },
+    { label: "14 kun", days: 14 },
+    { label: "30 kun", days: 30 },
+  ]
+
+  const applyQuickRange = (days: number) => {
+    const end = new Date()
+    const start = new Date(end)
+    start.setDate(start.getDate() - (days - 1))
+    setDateFrom(start.toISOString().slice(0, 10))
+    setDateTo(end.toISOString().slice(0, 10))
+  }
 
   const totalPrice = isWeightValid && isUnitPriceValid ? weight * unitPrice : 0
   const totalPriceRounded = totalPrice > 0 ? Math.round(totalPrice) : 0
@@ -221,7 +238,12 @@ export default function OwnerDebtsPage() {
       setIsLoading(true)
       setError(null)
       try {
-        const response = await get<Debt[] | { items?: Debt[] }>("/debts")
+        const response = await get<Debt[] | { items?: Debt[] }>("/debts", {
+          params: {
+            dateFrom: dateFrom || undefined,
+            dateTo: dateTo || undefined,
+          },
+        })
         if (cancelled) return
         const items = Array.isArray(response) ? response : response.items ?? []
         setDebts(items)
@@ -245,7 +267,7 @@ export default function OwnerDebtsPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [dateFrom, dateTo])
 
   const openPayModal = (row: Debt) => {
     setSelectedDebt(row)
@@ -277,7 +299,7 @@ export default function OwnerDebtsPage() {
       return
     }
 
-    const paidAtIso = paidAt ? new Date(paidAt).toISOString() : new Date().toISOString()
+    const paidAtIso = new Date().toISOString()
 
     setIsPaying(true)
     setModalError(null)
@@ -442,6 +464,53 @@ export default function OwnerDebtsPage() {
           <p className="text-sm text-muted-foreground mt-1">Qarz yozuvlarini ko'rish, tahlil qilish va boshqarish.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2" />
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 card-shadow-lg border border-slate-100 dark:border-slate-800 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">Davr boshi</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              placeholder="ДД.ММ.ГГГГ"
+              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">Davr oxiri</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              placeholder="ДД.ММ.ГГГГ"
+              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {quickRanges.map((range) => (
+            <button
+              key={range.label}
+              type="button"
+              onClick={() => applyQuickRange(range.days)}
+              className="px-4 py-2 border border-slate-200 text-sm text-[#2563EB] rounded-full bg-slate-50 hover:bg-[#EFF6FF]"
+            >
+              {range.label} so'nggi
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              setDateFrom("")
+              setDateTo("")
+            }}
+            className="px-4 py-2 border border-slate-200 text-sm text-slate-700 rounded-full bg-white hover:bg-slate-50"
+          >
+            Filtrlarni tozalash
+          </button>
+        </div>
       </div>
 
       <div className="bg-card rounded-2xl p-6 card-shadow-lg border border-border">
@@ -616,16 +685,6 @@ export default function OwnerDebtsPage() {
                 <p className="mt-1 text-xs text-slate-500">
                   Maksimal: {selectedDebt.outstanding.toLocaleString()} so'm
                 </p>
-              </div>
-
-              <div>
-                <label className="block text-sm text-slate-700 mb-1">To'lov sanasi va vaqti</label>
-                <input
-                  type="datetime-local"
-                  value={paidAt}
-                  onChange={(e) => setPaidAt(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
               </div>
 
               <div>
