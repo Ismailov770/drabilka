@@ -27,6 +27,22 @@ type ProductFlowCreateRequest = {
   loggedAt: string
 }
 
+type FuelDepositOperation = {
+  id: string
+  dateTime: string
+  driverName: string
+  vehiclePlate?: string
+  fuelType: string
+  liters?: number
+  balanceAfter?: number
+  comment?: string
+}
+
+type OwnerFuelStockSummary = {
+  dieselLiters: number
+  deposits: FuelDepositOperation[]
+}
+
 const columns = [
   { key: "id", label: "Hujjat ID", sortable: true },
   { key: "product", label: "Mahsulot", sortable: true },
@@ -35,8 +51,17 @@ const columns = [
   { key: "loggedAt", label: "Sana", sortable: true },
 ]
 
+const dieselDepositColumns = [
+  { key: "dateTime", label: "Sana / vaqt", sortable: true },
+  { key: "driverName", label: "Manba", sortable: true },
+  { key: "vehiclePlate", label: "Transport", sortable: true },
+  { key: "liters", label: "Depozit (litr)", sortable: true },
+  { key: "balanceAfter", label: "Qoldiq (litr)", sortable: true },
+]
+
 const quantityFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 3 })
 const amountFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 })
+const dieselFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 })
 
 function getTodayDateString() {
   const now = new Date()
@@ -46,8 +71,24 @@ function getTodayDateString() {
   return `${year}-${month}-${day}`
 }
 
+function formatDateTime(iso?: string): string {
+  if (!iso) return ""
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  const hours = String(d.getHours()).padStart(2, "0")
+  const minutes = String(d.getMinutes()).padStart(2, "0")
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
 export default function OwnerProductFlowPage() {
   const { toast } = useToast()
+
+  const [fuelSummary, setFuelSummary] = useState<OwnerFuelStockSummary | null>(null)
+  const [fuelError, setFuelError] = useState<string | null>(null)
+  const [isFuelLoading, setIsFuelLoading] = useState(false)
 
   const [filters, setFilters] = useState({
     dateFrom: "",
@@ -117,6 +158,46 @@ export default function OwnerProductFlowPage() {
     }
   }, [filters.dateFrom, filters.dateTo, filters.product])
 
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchFuelSummary = async () => {
+      setIsFuelLoading(true)
+      setFuelError(null)
+      try {
+        const response = await get<OwnerFuelStockSummary>("/owner/fuel-stock/summary", {
+          params: {
+            dateFrom: filters.dateFrom || undefined,
+            dateTo: filters.dateTo || undefined,
+          },
+        })
+
+        if (cancelled) return
+
+        setFuelSummary(response)
+      } catch (err: any) {
+        if (cancelled) return
+        if (err instanceof ApiError) {
+          const backendMessage =
+            (err.data && (err.data as any).message) || err.message || "Solyarka bo'yicha ma'lumotni yuklashda xatolik yuz berdi"
+          setFuelError(backendMessage)
+        } else {
+          setFuelError("Solyarka bo'yicha ma'lumotni yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+        }
+      } finally {
+        if (!cancelled) {
+          setIsFuelLoading(false)
+        }
+      }
+    }
+
+    fetchFuelSummary()
+
+    return () => {
+      cancelled = true
+    }
+  }, [filters.dateFrom, filters.dateTo])
+
   const withinRange = (dateStr: string) => {
     const current = new Date(dateStr).getTime()
     const from = filters.dateFrom ? new Date(filters.dateFrom).getTime() : undefined
@@ -140,6 +221,27 @@ export default function OwnerProductFlowPage() {
       <div>
         <h1 className="text-3xl font-bold text-[#0F172A]">Mahsulotlar kirimi</h1>
         <p className="text-[#64748B] mt-1">Silos va qadoqlash jarayonidagi barcha harakatlar</p>
+      </div>
+
+      <div className="bg-white rounded-lg p-6 card-shadow">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-[#0F172A] mb-1">Qolgan solyarka (l)</p>
+            <p className="text-2xl font-bold text-[#0F172A]">
+              {fuelSummary
+                ? dieselFormatter.format(fuelSummary.dieselLiters ?? 0)
+                : isFuelLoading
+                  ? "..."
+                  : "-"}
+            </p>
+            <p className="text-xs text-[#64748B] mt-1">
+              {filters.dateFrom || filters.dateTo
+                ? `Filtrlar asosida: ${filters.dateFrom || "boshlanishsiz"} - ${filters.dateTo || "tugashsiz"}`
+                : "Joriy balans bo'yicha"}
+            </p>
+          </div>
+          {fuelError && <p className="text-sm text-red-600 max-w-md">{fuelError}</p>}
+        </div>
       </div>
 
       <div className="bg-white rounded-lg p-6 card-shadow space-y-4">
@@ -243,6 +345,43 @@ export default function OwnerProductFlowPage() {
           )}
         />
       </div>
+      {fuelSummary && (
+        <div className="bg-white rounded-lg p-6 card-shadow">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-[#0F172A]">Solyarka depozitlari</h2>
+          </div>
+          <DataTable
+            columns={dieselDepositColumns}
+            data={(fuelSummary.deposits ?? []).map((op) => ({
+              ...op,
+              dateTime: formatDateTime(op.dateTime),
+              liters: op.liters ?? 0,
+              balanceAfter: op.balanceAfter ?? 0,
+            }))}
+            searchableFields={["driverName", "vehiclePlate", "comment"]}
+            renderCell={(row, col) => {
+              if (col.key === "liters") {
+                return `${dieselFormatter.format(row.liters)} l`
+              }
+              if (col.key === "balanceAfter") {
+                return `${dieselFormatter.format(row.balanceAfter)} l`
+              }
+              if (col.key === "dateTime") {
+                return row.dateTime
+              }
+              return row[col.key]
+            }}
+            footerTotals={(fuelSummary.deposits ?? []).reduce(
+              (acc, op) => {
+                acc.liters += op.liters ?? 0
+                acc.count += 1
+                return acc
+              },
+              { liters: 0, count: 0 },
+            )}
+          />
+        </div>
+      )}
       <Modal
         isOpen={isAddFlowOpen}
         title="Yangi mahsulot harakati"
