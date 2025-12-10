@@ -21,6 +21,23 @@ type ProductOutflow = {
   producedAt: string
 }
 
+type Sale = {
+  id: string
+  saleCode?: string
+  client: string
+  phone: string
+  carNumber: string
+  line: string
+  material: string
+  weight: number
+  price: number
+  unitPrice?: number
+  date: string
+  employee: string
+  paymentType: string
+  note?: string
+}
+
 const columns = [
   { key: "batchId", label: "Batch ID", sortable: true },
   { key: "product", label: "Mahsulot", sortable: true },
@@ -32,6 +49,21 @@ const columns = [
   { key: "transport", label: "Transport", sortable: true },
   { key: "operator", label: "Mas'ul operator", sortable: true },
   { key: "producedAt", label: "Berilgan sana", sortable: true },
+]
+
+const salesColumns = [
+  { key: "id", label: "Savdo ID", sortable: true },
+  { key: "client", label: "Mijoz", sortable: true },
+  { key: "phone", label: "Telefon raqami", sortable: true },
+  { key: "carNumber", label: "Avto raqami", sortable: true },
+  { key: "line", label: "Press liniyasi", sortable: true },
+  { key: "material", label: "Mahsulot", sortable: true },
+  { key: "weight", label: "Hajm (m³)", sortable: true },
+  { key: "unitPrice", label: "Narx (so'm / m³)", sortable: true },
+  { key: "price", label: "Summa (so'm)", sortable: true },
+  { key: "paymentType", label: "To'lov turi", sortable: true },
+  { key: "date", label: "Sana", sortable: true },
+  { key: "employee", label: "Mas'ul xodim", sortable: true },
 ]
 
 const numberFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 })
@@ -51,6 +83,8 @@ export default function OwnerProductionPage() {
   const [records, setRecords] = useState<ProductOutflow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [sales, setSales] = useState<Sale[]>([])
+  const [salesError, setSalesError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -94,6 +128,42 @@ export default function OwnerProductionPage() {
       cancelled = true
     }
   }, [filters.dateFrom, filters.dateTo, filters.product, filters.shift])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchSales = async () => {
+      setSalesError(null)
+      try {
+        const response = await get<Sale[] | { items?: Sale[] }>("/sales", {
+          params: {
+            dateFrom: filters.dateFrom || undefined,
+            dateTo: filters.dateTo || undefined,
+          },
+        })
+
+        if (cancelled) return
+
+        const items = Array.isArray(response) ? response : response.items ?? []
+        setSales(items)
+      } catch (err: any) {
+        if (cancelled) return
+        if (err instanceof ApiError) {
+          const backendMessage =
+            (err.data && (err.data as any).message) || err.message || "Savdolarni yuklashda xatolik yuz berdi"
+          setSalesError(backendMessage)
+        } else {
+          setSalesError("Savdolarni yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+        }
+      }
+    }
+
+    fetchSales()
+
+    return () => {
+      cancelled = true
+    }
+  }, [filters.dateFrom, filters.dateTo])
 
   const withinRange = (dateStr: string) => {
     const current = new Date(dateStr).getTime()
@@ -158,10 +228,10 @@ export default function OwnerProductionPage() {
               onChange={(product) => setFilters((prev) => ({ ...prev, product }))}
               options={[
                 { value: "all", label: "Barchasi" },
-                { value: "Shagal", label: "Shagal" },
-                { value: "Qum", label: "Qum" },
-                { value: "SHibyon", label: "Shibyon" },
+                { value: "Finski", label: "Finski" },
                 { value: "Kampot", label: "Kampot" },
+                { value: "Shebyon", label: "Shebyon" },
+                { value: "Klinest", label: "Klinest" },
               ]}
             />
           </div>
@@ -225,6 +295,28 @@ export default function OwnerProductionPage() {
             },
             { quantity: 0, totalSum: 0, count: 0 },
           )}
+        />
+      </div>
+
+      <div className="bg-white rounded-lg p-6 card-shadow">
+        <h2 className="text-lg font-semibold text-[#0F172A] mb-4">Savdolar bo'yicha tafsilot</h2>
+        {salesError && <p className="mb-4 text-sm text-red-600">{salesError}</p>}
+        <DataTable
+          columns={salesColumns}
+          data={sales}
+          searchableFields={["id", "client", "phone", "material", "carNumber", "paymentType"]}
+          renderCell={(row, col) => {
+            if (col.key === "id") {
+              return row.saleCode || row.id
+            }
+            if (col.key === "weight") {
+              return row.weight
+            }
+            if (col.key === "price" || col.key === "unitPrice") {
+              return numberFormatter.format(row[col.key] ?? 0)
+            }
+            return row[col.key]
+          }}
         />
       </div>
 

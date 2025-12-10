@@ -97,7 +97,7 @@ export default function OwnerDebtsPage() {
   const [debtorName, setDebtorName] = useState("")
   const [clientPhone, setClientPhone] = useState("")
   const [carNumber, setCarNumber] = useState("")
-  const [productType, setProductType] = useState("Shagal")
+  const [productType, setProductType] = useState("Finski")
   const [weight, setWeight] = useState<number | "">("")
   const [unitPrice, setUnitPrice] = useState<number | "">("")
   const [line, setLine] = useState<"" | "A" | "B">("")
@@ -344,7 +344,7 @@ export default function OwnerDebtsPage() {
     setDebtorName("")
     setClientPhone("")
     setCarNumber("")
-    setProductType("Shagal")
+    setProductType("Finski")
     setWeight("")
     setUnitPrice("")
     setLine("")
@@ -709,10 +709,10 @@ export default function OwnerDebtsPage() {
                 value={productType}
                 onChange={(value) => setProductType(value)}
                 options={[
-                  { value: "Shagal", label: "Shagal" },
-                  { value: "Qum", label: "Qum" },
-                  { value: "SHibyon", label: "SHibyon" },
+                  { value: "Finski", label: "Finski" },
                   { value: "Kampot", label: "Kampot" },
+                  { value: "Shebyon", label: "Shebyon" },
+                  { value: "Klinest", label: "Klinest" },
                 ]}
               />
             </div>

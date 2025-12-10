@@ -42,6 +42,20 @@ type VehicleLogEntry = {
   exitAt?: string
 }
 
+type CashReport = {
+  period: {
+    dateFrom: string
+    dateTo: string
+  }
+  openingCash: number
+  cashFromSalesNaqd: number
+  cashFromDebtsNaqd: number
+  expensesGeneral: number
+  expensesPayroll: number
+  cashExpenses: number
+  expectedCash: number
+}
+
 const dateFormatter = new Intl.DateTimeFormat("uz-UZ", { day: "2-digit", month: "short" })
 const dateTimeFormatter = new Intl.DateTimeFormat("uz-UZ", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
 const numberFormatter = new Intl.NumberFormat("ru-RU")
@@ -84,6 +98,11 @@ export default function OwnerDashboard() {
 
   const [sales, setSales] = useState<Sale[]>([])
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([])
+  const [cashReport, setCashReport] = useState<CashReport | null>(null)
+  const [cashReportError, setCashReportError] = useState<string | null>(null)
+  const [isCashReportLoading, setIsCashReportLoading] = useState(false)
+  const [openingCashInput, setOpeningCashInput] = useState("")
+  const [realCashInput, setRealCashInput] = useState("")
 
   const withinRange = (dateStr: string) => {
     const current = new Date(dateStr).getTime()
@@ -192,6 +211,55 @@ export default function OwnerDashboard() {
     }
   }, [filters.dateFrom, filters.dateTo])
 
+  useEffect(() => {
+    if (!filters.dateFrom || !filters.dateTo) {
+      setCashReport(null)
+      setCashReportError(null)
+      return
+    }
+
+    let cancelled = false
+
+    const fetchCashReport = async () => {
+      setIsCashReportLoading(true)
+      setCashReportError(null)
+      try {
+        const openingCash = openingCashInput ? Number(openingCashInput) || 0 : 0
+        const response = await get<CashReport | { report?: CashReport }>("/owner/cash-report", {
+          params: {
+            dateFrom: filters.dateFrom,
+            dateTo: filters.dateTo,
+            openingCash: openingCash || undefined,
+          },
+        })
+
+        if (cancelled) return
+
+        const report = (response as any).report ?? response
+        setCashReport(report as CashReport)
+      } catch (err: any) {
+        if (cancelled) return
+        if (err instanceof ApiError) {
+          const backendMessage =
+            (err.data && (err.data as any).message) || err.message || "Kassa hisobotini yuklashda xatolik yuz berdi"
+          setCashReportError(backendMessage)
+        } else {
+          setCashReportError("Kassa hisobotini yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+        }
+      } finally {
+        if (!cancelled) {
+          setIsCashReportLoading(false)
+        }
+      }
+    }
+
+    fetchCashReport()
+
+    return () => {
+      cancelled = true
+    }
+  }, [filters.dateFrom, filters.dateTo, openingCashInput])
+
   const shiftToUzbekLabel = (shift: string) => {
     switch (shift) {
       case "DAY":
@@ -273,6 +341,16 @@ export default function OwnerDashboard() {
     [filteredBatchesForTotals, filteredSales, filteredExpenses, filteredPayroll, filteredVehicles],
   )
 
+  const expectedCash = cashReport?.expectedCash ?? 0
+  const cashFromSalesNaqd = cashReport?.cashFromSalesNaqd ?? 0
+  const cashFromDebtsNaqd = cashReport?.cashFromDebtsNaqd ?? 0
+  const expensesGeneral = cashReport?.expensesGeneral ?? 0
+  const expensesPayroll = cashReport?.expensesPayroll ?? 0
+  const cashExpenses = cashReport?.cashExpenses ?? 0
+  const openingCash = cashReport?.openingCash ?? (openingCashInput ? Number(openingCashInput) || 0 : 0)
+  const realCash = realCashInput ? Number(realCashInput) || 0 : 0
+  const cashDifference = realCash - expectedCash
+
   const hasAnyData = useMemo(
     () =>
       filteredBatchesForTotals.length > 0 ||
@@ -347,6 +425,102 @@ export default function OwnerDashboard() {
         </div>
       </div>
 
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 card-shadow-lg border border-slate-100 dark:border-slate-800">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold text-slate-900">Naqd kassa hisobot</h2>
+            {isCashReportLoading && <span className="text-xs text-slate-500">Yuklanmoqda...</span>}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-slate-900 mb-2">Davr boshidagi naqd kassa</label>
+              <input
+                type="number"
+                value={openingCashInput}
+                onChange={(e) => setOpeningCashInput(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                placeholder="Masalan, 45000000"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-900 mb-2">Davr oxiridagi real kassa</label>
+              <input
+                type="number"
+                value={realCashInput}
+                onChange={(e) => setRealCashInput(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                placeholder="Masalan, 50000000"
+              />
+            </div>
+          </div>
+          {cashReportError && <p className="text-sm text-red-600">{cashReportError}</p>}
+          {!filters.dateFrom || !filters.dateTo ? (
+            <p className="text-sm text-slate-500">
+              Kassa hisobotini ko'rish uchun iltimos, yuqoridan davr boshi va oxirini tanlang.
+            </p>
+          ) : cashReport ? (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                <p className="text-xs font-medium text-slate-500">Naqd savdolar</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {currencyFormatter.format(cashFromSalesNaqd)} so'm
+                </p>
+              </div>
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                <p className="text-xs font-medium text-slate-500">Qarz to'lovlari (naqd)</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {currencyFormatter.format(cashFromDebtsNaqd)} so'm
+                </p>
+              </div>
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                <p className="text-xs font-medium text-slate-500">Rasxodlar (umumiy)</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {currencyFormatter.format(expensesGeneral)} so'm
+                </p>
+              </div>
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                <p className="text-xs font-medium text-slate-500">Ish haqi (kassadan)</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {currencyFormatter.format(expensesPayroll)} so'm
+                </p>
+              </div>
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                <p className="text-xs font-medium text-slate-500">Umumiy kassa xarajatlari</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {currencyFormatter.format(cashExpenses)} so'm
+                </p>
+              </div>
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                <p className="text-xs font-medium text-slate-500">Nazariy kassa (baza bo'yicha)</p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {currencyFormatter.format(expectedCash)} so'm
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Farq:{" "}
+                  <span
+                    className={
+                      cashDifference === 0
+                        ? "text-slate-700"
+                        : cashDifference > 0
+                          ? "text-emerald-600"
+                          : "text-rose-600"
+                    }
+                  >
+                    {currencyFormatter.format(cashDifference)} so'm
+                  </span>
+                </p>
+              </div>
+            </div>
+          ) : (
+            !cashReportError && (
+              <p className="text-sm text-slate-500">
+                Tanlangan davr bo'yicha kassa hisobotini ko'rish uchun yuqoridagi maydonlarni to'ldiring.
+              </p>
+            )
+          )}
+        </div>
+      </div>
+
       {/* Umumiy statistika bo'yicha kartochkalar */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -391,40 +565,7 @@ export default function OwnerDashboard() {
       </div>
 
       {/* Batafsil bo'limlar */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-6 card-shadow-lg border border-slate-100 dark:border-slate-800">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-900">Oxirgi batchlar</h2>
-            <span className="text-sm text-slate-500">So'nggi 4 ta partiya</span>
-          </div>
-          {batchesError && <p className="mb-4 text-sm text-red-600">{batchesError}</p>}
-          <div className="space-y-4">
-            {latestBatches.map((batch) => (
-              <div
-                key={batch.batchId}
-                className="flex items-center justify-between border border-slate-200 dark:border-slate-800 rounded-2xl p-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-              >
-                <div>
-                  <p className="font-semibold text-slate-900">
-                    {batch.batchId} · {batch.product}
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    {shiftToUzbekLabel(batch.shift)} · {batch.line} · {dateTimeFormatter.format(new Date(batch.producedAt))}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-semibold text-slate-900">
-                    {batch.quantity} {batch.unit}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {!isBatchesLoading && latestBatches.length === 0 && !batchesError && (
-              <p className="text-sm text-slate-400">Tanlangan davr uchun batchlar topilmadi</p>
-            )}
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 gap-6">
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 card-shadow-lg border border-slate-100 dark:border-slate-800">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Rasxodlar bo'yicha signal</h2>
           {expensesError && <p className="mb-2 text-sm text-red-600">{expensesError}</p>}
@@ -445,72 +586,6 @@ export default function OwnerDashboard() {
               <p className="text-sm text-slate-400">Tanlangan davr uchun rasxodlar topilmadi</p>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Mashinalar harakati */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 card-shadow-lg border border-slate-100 dark:border-slate-800">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-slate-900">Kelib chiqayotgan mashinalar</h2>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-500">
-              {filters.dateFrom || filters.dateTo ? "Filtrlash natijalari" : "Oxirgi 5 ta yozuv"}
-            </span>
-            <Link href="/owner-dashboard/driver-fuel" className="text-sm text-[#2563EB] hover:underline">
-              Haydovchi yoqilg'i sarfi
-            </Link>
-          </div>
-        </div>
-        {vehiclesError && <p className="mb-4 text-sm text-red-600">{vehiclesError}</p>}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-200">
-                <th className="text-left px-4 py-3 font-semibold text-slate-700">Mashina</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-700">Yo'nalish</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-700">Maqsad</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-700">Haydovchi</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-700">Vaqt</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredVehicles.length > 0 ? (
-                filteredVehicles.map((vehicle) => {
-                  const timestamp = vehicle.entryAt || vehicle.exitAt
-                  return (
-                    <tr
-                      key={`${vehicle.vehicleIdCode}-${timestamp}`}
-                      className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
-                    >
-                      <td className="px-4 py-3 font-medium text-slate-900">{vehicle.vehicleIdCode}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          vehicle.direction === "Kirdi"
-                            ? "bg-blue-50 text-blue-700"
-                            : "bg-rose-50 text-rose-700"
-                        }`}
-                      >
-                        {vehicle.direction}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-500">{vehicle.material}</td>
-                    <td className="px-4 py-3 text-slate-900">{vehicle.driver}</td>
-                    <td className="px-4 py-3 text-slate-500">
-                      {timestamp ? dateTimeFormatter.format(new Date(timestamp)) : "-"}
-                    </td>
-                  </tr>
-                  )
-                })
-              ) : (
-                <tr>
-                  <td className="px-4 py-6 text-center text-slate-400" colSpan={5}>
-                    Tanlangan vaqt oralig'ida ma'lumot yo'q
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
