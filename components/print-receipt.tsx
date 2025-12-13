@@ -47,8 +47,8 @@ export function printSaleReceipt(sale: Record<string, any>) {
           <hr />
           <div class="line"><div>Mijoz</div><div>${sale.client}</div></div>
           <div class="line"><div>Telefon</div><div>${sale.phone || '-'}</div></div>
-          <div class="line"><div>Avto raqami</div><div>${sale.carNumber || '-'}</div></div>
-          <div class="line"><div>Mahsulot</div><div>${sale.material}</div></div>
+          <div class="line" style="font-size: 15px;"><div>Avto raqami</div><div>${sale.carNumber || '-'}</div></div>
+          <div class="line" style="font-size: 15px;"><div>Mahsulot</div><div>${sale.material}</div></div>
           <div class="line"><div>Hajm</div><div>${sale.weight} m³</div></div>
           <div class="line"><div>Summa</div><div>${sale.price} so'm</div></div>
           <div class="line"><div>Mas'ul xodim</div><div>${sale.employee || '-'}</div></div>
