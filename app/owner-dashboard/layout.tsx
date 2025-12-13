@@ -85,6 +85,11 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
           href: "/owner-dashboard/driver-fuel",
           icon: <ClipboardList className="w-4 h-4" />,
         },
+            {
+          label: "Avtomobillar royhati",
+          href: "/owner-dashboard/anprsystem",
+          icon: <ClipboardList className="w-4 h-4" />,
+        },
       ],
     },
     
