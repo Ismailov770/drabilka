@@ -6,6 +6,8 @@ import { DataTable } from "@/components/data-table"
 import { SelectField } from "@/components/select-field"
 import { ApiError, get } from "@/styles/lib/api"
 
+type PaymentType = "Naqd" | "Qarzga" | "Click" | "OPLATA"
+
 type ProductOutflow = {
   id: string
   batchId: string
@@ -22,20 +24,20 @@ type ProductOutflow = {
 }
 
 type Sale = {
-  id: string
-  saleCode?: string
+  id: number
+  saleCode: string
   client: string
   phone: string
   carNumber: string
-  line: string
+  line: "A" | "B"
   material: string
   weight: number
   price: number
-  unitPrice?: number
+  unitPrice: number | null
   date: string
   employee: string
-  paymentType: string
-  note?: string
+  paymentType: PaymentType
+  note: string | null
 }
 
 const columns = [
@@ -79,6 +81,7 @@ export default function OwnerProductionPage() {
     dateTo: defaultDateTo,
     product: "all",
     shift: "all",
+    paymentType: "all" as "all" | PaymentType,
   })
   const [records, setRecords] = useState<ProductOutflow[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -135,7 +138,7 @@ export default function OwnerProductionPage() {
     const fetchSales = async () => {
       setSalesError(null)
       try {
-        const response = await get<Sale[] | { items?: Sale[] }>("/sales", {
+        const response = await get<Sale[]>("/sales", {
           params: {
             dateFrom: filters.dateFrom || undefined,
             dateTo: filters.dateTo || undefined,
@@ -144,8 +147,7 @@ export default function OwnerProductionPage() {
 
         if (cancelled) return
 
-        const items = Array.isArray(response) ? response : response.items ?? []
-        setSales(items)
+        setSales(response)
       } catch (err: any) {
         if (cancelled) return
         if (err instanceof ApiError) {
@@ -184,6 +186,16 @@ export default function OwnerProductionPage() {
     [records, filters.product, filters.shift, filters.dateFrom, filters.dateTo],
   )
 
+  const filteredSales = useMemo(
+    () =>
+      sales.filter((sale) => {
+        const matchesPaymentType =
+          filters.paymentType === "all" || sale.paymentType === filters.paymentType
+        return matchesPaymentType
+      }),
+    [sales, filters.paymentType],
+  )
+
   const totals = filteredRecords.reduce(
     (acc, record) => {
       acc.quantity += record.quantity
@@ -202,7 +214,7 @@ export default function OwnerProductionPage() {
 
       {/* Filter panel */}
       <div className="bg-white rounded-lg p-6 card-shadow space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Boshlanish sanasi</label>
             <input
@@ -247,6 +259,22 @@ export default function OwnerProductionPage() {
               ]}
             />
           </div>
+          <div>
+            <label className="text-sm font-semibold text-[#0F172A] mb-2 block">To'lov turi (savdolar)</label>
+            <SelectField
+              value={filters.paymentType}
+              onChange={(paymentType) =>
+                setFilters((prev) => ({ ...prev, paymentType: paymentType as "all" | PaymentType }))
+              }
+              options={[
+                { value: "all", label: "Barchasi" },
+                { value: "Naqd", label: "Naqd" },
+                { value: "Qarzga", label: "Qarzga" },
+                { value: "Click", label: "Click" },
+                { value: "OPLATA", label: "OPLATA" },
+              ]}
+            />
+          </div>
         </div>
         <div className="flex justify-end">
           <button
@@ -257,6 +285,7 @@ export default function OwnerProductionPage() {
                 dateTo: "",
                 product: "all",
                 shift: "all",
+                paymentType: "all",
               })
             }
             className="px-4 py-2 border border-[#E2E8F0] rounded-lg text-sm text-[#0F172A] hover:bg-[#F1F5F9] mt-2"
@@ -303,7 +332,7 @@ export default function OwnerProductionPage() {
         {salesError && <p className="mb-4 text-sm text-red-600">{salesError}</p>}
         <DataTable
           columns={salesColumns}
-          data={sales}
+          data={filteredSales}
           searchableFields={["id", "client", "phone", "material", "carNumber", "paymentType"]}
           renderCell={(row, col) => {
             if (col.key === "id") {

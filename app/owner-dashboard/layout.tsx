@@ -62,6 +62,11 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
           href: "/owner-dashboard/product-flow",
           icon: <Repeat2 className="w-4 h-4" />,
         },
+        {
+          label: "OPLATA",
+          href: "/owner-dashboard/oplata",
+          icon: <CreditCard className="w-4 h-4" />,
+        },
       ],
     },
     {

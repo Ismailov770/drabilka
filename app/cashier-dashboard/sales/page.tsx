@@ -10,28 +10,52 @@ import { SelectField } from "@/components/select-field"
 import { ApiError, get, post } from "@/styles/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
+type PaymentType = "Naqd" | "Qarzga" | "Click" | "OPLATA"
+
 type Sale = {
-  id: string
-  saleCode?: string
+  id: number
+  saleCode: string
   client: string
   phone: string
-  line: string
+  carNumber: string
+  line: "A" | "B"
   material: string
   weight: number
   price: number
-  unitPrice?: number
+  unitPrice: number | null
   date: string
   employee: string
+  paymentType: PaymentType
+  note: string | null
+}
+
+type OplataContract = {
+  id: number
+  company: string
+  contractSalesCount: number
+  remainingSales: number
+  amount: number
+  createdAt: string
+}
+
+type CreateSalePayload = {
+  client: string
+  phone: string
+  material: string
+  weight: number
+  price: number
   carNumber: string
-  paymentType: string
+  line: "A" | "B"
+  paymentType: PaymentType
   note?: string
+  oplataContractId?: number
 }
 
 export default function SalesPage() {
   const [showAddSale, setShowAddSale] = useState(false)
   const [sales, setSales] = useState<Sale[]>([])
 
-  const [paymentType, setPaymentType] = useState("Naqd")
+  const [paymentType, setPaymentType] = useState<PaymentType>("Naqd")
   const [debtorName, setDebtorName] = useState("")
   const [clientPhone, setClientPhone] = useState("")
   const [carNumber, setCarNumber] = useState("")
@@ -43,6 +67,9 @@ export default function SalesPage() {
   const [note, setNote] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const [oplataContracts, setOplataContracts] = useState<OplataContract[]>([])
+  const [selectedOplataContractId, setSelectedOplataContractId] = useState("")
 
   const { toast } = useToast()
 
@@ -62,7 +89,8 @@ export default function SalesPage() {
     !!line &&
     !!carNumber &&
     !!clientPhone &&
-    (paymentType !== "Qarzga" || !!debtorName)
+    (paymentType !== "Qarzga" || !!debtorName) &&
+    (paymentType !== "OPLATA" || !!selectedOplataContractId)
 
   useEffect(() => {
     let cancelled = false
@@ -70,10 +98,9 @@ export default function SalesPage() {
     const fetchSales = async () => {
       setError(null)
       try {
-        const response = await get<Sale[] | { items?: Sale[] }>("/sales")
+        const response = await get<Sale[]>("/sales")
         if (cancelled) return
-        const items = Array.isArray(response) ? response : response.items ?? []
-        setSales(items)
+        setSales(response)
       } catch (err: any) {
         if (cancelled) return
         if (err instanceof ApiError) {
@@ -91,6 +118,42 @@ export default function SalesPage() {
       cancelled = true
     }
   }, [])
+
+  const loadOplataContracts = async () => {
+    try {
+      const contracts = await get<OplataContract[]>("/oplata-contracts")
+      setOplataContracts(contracts)
+    } catch (err: any) {
+      if (err instanceof ApiError) {
+        const backendMessage =
+          (err.data && (err.data as any).message) ||
+          err.message ||
+          "OPLATA shartnomalarini yuklashda xatolik yuz berdi"
+        toast({
+          title: "Xatolik",
+          description: backendMessage,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Xatolik",
+          description:
+            "OPLATA shartnomalarini yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
+  useEffect(() => {
+    loadOplataContracts()
+  }, [])
+
+  useEffect(() => {
+    if (showAddSale) {
+      loadOplataContracts()
+    }
+  }, [showAddSale])
 
   const formatUzbekPhone = (value: string) => {
     const digits = value.replace(/\D/g, "")
@@ -205,19 +268,41 @@ export default function SalesPage() {
               const weightValue = isWeightValid ? weight : 0
               const priceValue = totalPriceRounded
 
-              const payload = {
-                client: paymentType === "Qarzga" && debtorName ? debtorName : "Naqd mijoz",
+              const selectedContract =
+                paymentType === "OPLATA"
+                  ? oplataContracts.find((c) => String(c.id) === selectedOplataContractId)
+                  : undefined
+
+              const payload: CreateSalePayload = {
+                client:
+                  paymentType === "Qarzga" && debtorName
+                    ? debtorName
+                    : paymentType === "OPLATA" && selectedContract
+                      ? selectedContract.company
+                      : "Naqd mijoz",
                 phone: clientPhone,
                 material: productType,
                 weight: weightValue,
                 price: priceValue,
                 carNumber,
-                line,
+                line: line as "A" | "B",
                 paymentType,
-                note: note || (paymentType === "Qarzga" ? "Qarzga savdo" : undefined),
+                note:
+                  note ||
+                  (paymentType === "Qarzga"
+                    ? "Qarzga savdo"
+                    : paymentType === "OPLATA" && selectedContract
+                      ? `OPLATA shartnoma: ${selectedContract.company}`
+                      : undefined),
               }
 
-              await post<Sale | { sale?: Sale }>("/sales", payload)
+              if (paymentType === "OPLATA" && selectedContract) {
+                payload.oplataContractId = selectedContract.id
+              }
+
+              const createdSale = await post<Sale, CreateSalePayload>("/sales", payload)
+
+              printSaleReceipt(createdSale as any)
 
               toast({
                 title: "Savdo saqlandi",
@@ -225,11 +310,14 @@ export default function SalesPage() {
               })
 
               try {
-                const response = await get<Sale[] | { items?: Sale[] }>("/sales")
-                const items = Array.isArray(response) ? response : response.items ?? []
-                setSales(items)
+                const response = await get<Sale[]>("/sales")
+                setSales(response)
               } catch {
                 // Agar yangilash muvaffaqiyatsiz bo'lsa, mavjud ro'yxatni o'zgarishsiz qoldiramiz
+              }
+
+              if (paymentType === "OPLATA") {
+                loadOplataContracts()
               }
 
               // Forma qiymатларини тозалаш
@@ -242,6 +330,7 @@ export default function SalesPage() {
               setLineTouched(false)
               setPaymentType("Naqd")
               setDebtorName("")
+              setSelectedOplataContractId("")
               setNote("")
               setShowAddSale(false)
             } catch (err: any) {
@@ -277,6 +366,7 @@ export default function SalesPage() {
               onChange={(e) => setCarNumber(e.target.value)}
               placeholder="Avto raqami"
               className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
+              required
             />
           </div>
           <div>
@@ -382,11 +472,17 @@ export default function SalesPage() {
             <label className="block text-sm font-medium text-[#0F172A] mb-2">To'lov turi</label>
             <SelectField
               value={paymentType}
-              onChange={(value) => setPaymentType(value)}
+              onChange={(value) => {
+                setPaymentType(value as PaymentType)
+                if (value !== "OPLATA") {
+                  setSelectedOplataContractId("")
+                }
+              }}
               options={[
                 { value: "Naqd", label: "Naqd" },
                 { value: "Qarzga", label: "Qarzga" },
                 { value: "Click", label: "Click" },
+                { value: "OPLATA", label: "OPLATA" },
               ]}
             />
           </div>
@@ -401,6 +497,36 @@ export default function SalesPage() {
                 className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
                 required
               />
+            </div>
+          )}
+          {paymentType === "OPLATA" && (
+            <div>
+              <label className="block text-sm font-medium text-[#0F172A] mb-2">Shartnoma (kompaniya)</label>
+              <SelectField
+                value={selectedOplataContractId}
+                onChange={(value) => setSelectedOplataContractId(value)}
+                options={
+                  oplataContracts.length
+                    ? oplataContracts.map((c) => ({
+                        value: String(c.id),
+                        label: `${c.company} (${c.remainingSales} qolgan)`,
+                      }))
+                    : []
+                }
+                placeholder={
+                  oplataContracts.length
+                    ? "Shartnomani tanlang..."
+                    : "OPLATA shartnomalari topilmadi (owner interfeysida qo'shing)"
+                }
+              />
+              {oplataContracts.length === 0 && (
+                <p className="mt-1 text-xs text-red-600">
+                  OPLATA shartnomalari topilmadi. Avval owner OPLATA bo'limida shartnoma qo'shing.
+                </p>
+              )}
+              {oplataContracts.length > 0 && !selectedOplataContractId && (
+                <p className="mt-1 text-xs text-red-600">OPLATA shartnoma tanlanishi shart</p>
+              )}
             </div>
           )}
           <div>
