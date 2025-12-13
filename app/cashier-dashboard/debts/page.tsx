@@ -235,14 +235,14 @@ export default function CashierDebtsPage() {
       return
     }
 
-    const paidAtIso = new Date().toISOString()
+    const paidAt = new Date().toISOString().slice(0, 10)
 
     setIsPaying(true)
     setModalError(null)
     try {
       const body = {
         amount,
-        paidAt: paidAtIso,
+        paidAt,
         type: null as string | null,
         comment: payComment || null,
       }
