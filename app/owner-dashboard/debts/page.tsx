@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { DataTable } from "@/components/data-table"
 import { Button } from "@/components/button"
 
@@ -108,6 +108,11 @@ export default function OwnerDebtsPage() {
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
 
+  const [appliedDateFrom, setAppliedDateFrom] = useState("")
+  const [appliedDateTo, setAppliedDateTo] = useState("")
+
+  const requestSeqRef = useRef(0)
+
   const { toast } = useToast()
 
   const numberFormatter = new Intl.NumberFormat("uz-UZ")
@@ -124,9 +129,50 @@ export default function OwnerDebtsPage() {
     const end = new Date()
     const start = new Date(end)
     start.setDate(start.getDate() - (days - 1))
-    setDateFrom(start.toISOString().slice(0, 10))
-    setDateTo(end.toISOString().slice(0, 10))
+    const nextFrom = start.toISOString().slice(0, 10)
+    const nextTo = end.toISOString().slice(0, 10)
+    setDateFrom(nextFrom)
+    setDateTo(nextTo)
+    setAppliedDateFrom(nextFrom)
+    setAppliedDateTo(nextTo)
   }
+
+  const requestParams = useMemo(
+    () => ({
+      dateFrom: appliedDateFrom || undefined,
+      dateTo: appliedDateTo || undefined,
+    }),
+    [appliedDateFrom, appliedDateTo],
+  )
+
+  const loadDebts = useCallback(async () => {
+    requestSeqRef.current += 1
+    const seq = requestSeqRef.current
+
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await get<Debt[] | { items?: Debt[] }>("/debts", {
+        params: requestParams,
+      })
+      if (seq !== requestSeqRef.current) return
+      const items = Array.isArray(response) ? response : response.items ?? []
+      setDebts(items)
+    } catch (err: any) {
+      if (seq !== requestSeqRef.current) return
+      if (err instanceof ApiError) {
+        const backendMessage = (err.data && (err.data as any).message) || err.message || "Qarzlarni yuklashda xatolik yuz berdi"
+        setError(backendMessage)
+      } else {
+        setError("Qarzlarni yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+      }
+      setDebts([])
+    } finally {
+      if (seq === requestSeqRef.current) {
+        setIsLoading(false)
+      }
+    }
+  }, [requestParams])
 
   const totalPrice = isWeightValid && isUnitPriceValid ? weight * unitPrice : 0
   const totalPriceRounded = totalPrice > 0 ? Math.round(totalPrice) : 0
@@ -232,42 +278,23 @@ export default function OwnerDebtsPage() {
   }
 
   useEffect(() => {
-    let cancelled = false
-
-    const fetchDebts = async () => {
-      setIsLoading(true)
-      setError(null)
-      try {
-        const response = await get<Debt[] | { items?: Debt[] }>("/debts", {
-          params: {
-            dateFrom: dateFrom || undefined,
-            dateTo: dateTo || undefined,
-          },
-        })
-        if (cancelled) return
-        const items = Array.isArray(response) ? response : response.items ?? []
-        setDebts(items)
-      } catch (err: any) {
-        if (cancelled) return
-        if (err instanceof ApiError) {
-          const backendMessage = (err.data && (err.data as any).message) || err.message || "Qarzlarni yuklashda xatolik yuz berdi"
-          setError(backendMessage)
-        } else {
-          setError("Qarzlarni yuklashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
-        }
-      }
-    }
-
-    fetchDebts()
-
+    loadDebts()
     return () => {
-      cancelled = true
+      requestSeqRef.current += 1
     }
-  }, [dateFrom, dateTo])
+  }, [loadDebts])
+
+  const onSearch = () => {
+    setAppliedDateFrom(dateFrom)
+    setAppliedDateTo(dateTo)
+  }
+
+  const onResetFilters = () => {
+    setDateFrom("")
+    setDateTo("")
+    setAppliedDateFrom("")
+    setAppliedDateTo("")
+  }
 
   const openPayModal = (row: Debt) => {
     setSelectedDebt(row)
@@ -469,47 +496,45 @@ export default function OwnerDebtsPage() {
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 card-shadow-lg border border-slate-100 dark:border-slate-800 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">Davr boshi</label>
+            <label className="block text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">Davr boshi</label>
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              placeholder="ДД.ММ.ГГГГ"
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+              className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-950/20 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">Davr oxiri</label>
+            <label className="block text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">Davr oxiri</label>
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              placeholder="ДД.ММ.ГГГГ"
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+              className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-950/20 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
             />
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {quickRanges.map((range) => (
-            <button
+            <Button
               key={range.label}
               type="button"
               onClick={() => applyQuickRange(range.days)}
-              className="px-4 py-2 border border-slate-200 text-sm text-[#2563EB] rounded-full bg-slate-50 hover:bg-[#EFF6FF]"
+              variant="outline"
+              size="sm"
             >
               {range.label} so'nggi
-            </button>
+            </Button>
           ))}
-          <button
-            type="button"
-            onClick={() => {
-              setDateFrom("")
-              setDateTo("")
-            }}
-            className="px-4 py-2 border border-slate-200 text-sm text-slate-700 rounded-full bg-white hover:bg-slate-50"
-          >
-            Filtrlarni tozalash
-          </button>
+          <Button type="button" variant="secondary" size="sm" onClick={onSearch} disabled={isLoading}>
+            Qidirish
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={onResetFilters} disabled={isLoading}>
+            Tozalash
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={loadDebts} disabled={isLoading}>
+            Yangilash
+          </Button>
         </div>
       </div>
 

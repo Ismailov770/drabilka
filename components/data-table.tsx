@@ -58,6 +58,19 @@ export function DataTable({ columns, data, searchableFields = [], actions, rende
   const totalPages = Math.ceil(filteredData.length / itemsPerPage)
   const displayData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
+  React.useEffect(() => {
+    if (totalPages === 0) {
+      if (currentPage !== 1) {
+        setCurrentPage(1)
+      }
+      return
+    }
+
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
+
   // Calculate totals from filtered data (including search filter)
   const calculatedTotals = footerTotals
     ? filteredData.reduce(
@@ -95,7 +108,7 @@ export function DataTable({ columns, data, searchableFields = [], actions, rende
               setSearchTerm(e.target.value)
               setCurrentPage(1)
             }}
-            className="flex-1 px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+            className="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-950/20 text-sm text-slate-700 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
           />
         </div>
       )}
@@ -179,42 +192,42 @@ export function DataTable({ columns, data, searchableFields = [], actions, rende
                   }
                   if (col.key === "cost" && calculatedTotals.cost !== undefined) {
                     return (
-                      <td key={col.key} className="px-6 py-4 text-slate-900 text-sm">
+                      <td key={col.key} className="px-6 py-4 text-slate-900 dark:text-slate-100 text-sm">
                         {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(calculatedTotals.cost)} so'm
                       </td>
                     )
                   }
                   if (col.key === "totalSum" && calculatedTotals.totalSum !== undefined) {
                     return (
-                      <td key={col.key} className="px-6 py-4 text-slate-900 text-sm">
+                      <td key={col.key} className="px-6 py-4 text-slate-900 dark:text-slate-100 text-sm">
                         {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(calculatedTotals.totalSum)} so'm
                       </td>
                     )
                   }
                   if (col.key === "amount" && calculatedTotals.amount !== undefined) {
                     return (
-                      <td key={col.key} className="px-6 py-4 text-slate-900 text-sm">
+                      <td key={col.key} className="px-6 py-4 text-slate-900 dark:text-slate-100 text-sm">
                         {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(calculatedTotals.amount)} so'm
                       </td>
                     )
                   }
                   if (col.key === "total" && calculatedTotals.total !== undefined) {
                     return (
-                      <td key={col.key} className="px-6 py-4 text-slate-900 text-sm">
+                      <td key={col.key} className="px-6 py-4 text-slate-900 dark:text-slate-100 text-sm">
                         {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(calculatedTotals.total)} so'm
                       </td>
                     )
                   }
                   if (col.key === "advance" && calculatedTotals.advance !== undefined) {
                     return (
-                      <td key={col.key} className="px-6 py-4 text-slate-900 text-sm">
+                      <td key={col.key} className="px-6 py-4 text-slate-900 dark:text-slate-100 text-sm">
                         {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(calculatedTotals.advance)} so'm
                       </td>
                     )
                   }
                   if (col.key === "remaining" && calculatedTotals.remaining !== undefined) {
                     return (
-                      <td key={col.key} className="px-6 py-4 text-slate-900 text-sm">
+                      <td key={col.key} className="px-6 py-4 text-slate-900 dark:text-slate-100 text-sm">
                         {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(calculatedTotals.remaining)} so'm
                       </td>
                     )
@@ -242,7 +255,7 @@ export function DataTable({ columns, data, searchableFields = [], actions, rende
                     !columns.find((c) => c.key === "operator")
                   ) {
                     return (
-                      <td key={col.key} className="px-6 py-4 text-slate-900 font-semibold text-sm">
+                      <td key={col.key} className="px-6 py-4 text-slate-900 dark:text-slate-100 font-semibold text-sm">
                         {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(calculatedTotals.count)} ta
                       </td>
                     )
@@ -256,7 +269,7 @@ export function DataTable({ columns, data, searchableFields = [], actions, rende
                     !columns.find((c) => c.key === "producedAt" || c.key === "loggedAt" || c.key === "payoutDate" || c.key === "date")
                   ) {
                     return (
-                      <td key={col.key} className="px-6 py-4 text-slate-900 font-semibold text-sm">
+                      <td key={col.key} className="px-6 py-4 text-slate-900 dark:text-slate-100 font-semibold text-sm">
                         {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(calculatedTotals.count)} ta
                       </td>
                     )
@@ -271,7 +284,7 @@ export function DataTable({ columns, data, searchableFields = [], actions, rende
                     !columns.find((c) => c.key === "status")
                   ) {
                     return (
-                      <td key={col.key} className="px-6 py-4 text-slate-900 font-semibold text-sm">
+                      <td key={col.key} className="px-6 py-4 text-slate-900 dark:text-slate-100 font-semibold text-sm">
                         {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(calculatedTotals.count)} ta
                       </td>
                     )

@@ -21,86 +21,86 @@ export default function RepairsPage() {
   const [repairs] = useState([
     {
       id: "R001",
-      equipment: "Conveyor Belt",
-      issue: "Belt misalignment",
+      equipment: "Konveyer tasmasi",
+      issue: "Tasma siljishi",
       date: "2024-01-14",
       cost: 2500,
       tech: "Ahmed M.",
-      status: "Completed",
+      status: "Bajarildi",
     },
     {
       id: "R002",
-      equipment: "Kiln Furnace",
-      issue: "Temperature sensor replacement",
+      equipment: "Pech",
+      issue: "Harorat sensori almashtirildi",
       date: "2024-01-12",
       cost: 3200,
       tech: "Karim S.",
-      status: "Completed",
+      status: "Bajarildi",
     },
     {
       id: "R003",
-      equipment: "Crusher Mill",
-      issue: "Bearing maintenance",
+      equipment: "Tegirmon",
+      issue: "Podshipniklarga xizmat ko'rsatish",
       date: "2024-01-10",
       cost: 1800,
       tech: "Omar R.",
-      status: "Completed",
+      status: "Bajarildi",
     },
   ])
 
   const columns = [
-    { key: "id", label: "Repair ID", sortable: true },
-    { key: "equipment", label: "Equipment", sortable: true },
-    { key: "issue", label: "Issue Description", sortable: false },
-    { key: "date", label: "Date", sortable: true },
-    { key: "cost", label: "Cost (so'm)", sortable: true },
-    { key: "tech", label: "Technician", sortable: true },
-    { key: "status", label: "Status", sortable: true },
+    { key: "id", label: "Ta'mirlash ID", sortable: true },
+    { key: "equipment", label: "Uskuna", sortable: true },
+    { key: "issue", label: "Muammo tavsifi", sortable: false },
+    { key: "date", label: "Sana", sortable: true },
+    { key: "cost", label: "Xarajat (so'm)", sortable: true },
+    { key: "tech", label: "Usta", sortable: true },
+    { key: "status", label: "Holat", sortable: true },
   ]
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-[#0F172A]">Repair Log</h1>
-          <p className="text-[#64748B] mt-1">Track equipment repairs and maintenance</p>
+          <h1 className="text-3xl font-bold text-[#0F172A] dark:text-slate-100">Ta'mirlash jurnali</h1>
+          <p className="text-[#64748B] mt-1">Uskunalar ta'miri va texnik xizmatini nazorat qilish</p>
         </div>
         <Button onClick={() => setShowAddRepair(true)} variant="primary" size="lg">
-          ➕ Log Repair
+          ➕ Ta'mir qo'shish
         </Button>
       </div>
 
-      <div className="bg-white rounded-lg p-6 card-shadow">
+      <div className="bg-white dark:bg-slate-900 rounded-lg p-6 card-shadow">
         <DataTable columns={columns} data={repairs} searchableFields={["equipment", "issue"]} />
       </div>
 
-      <Modal isOpen={showAddRepair} title="Log Equipment Repair" onClose={() => setShowAddRepair(false)} size="md">
+      <Modal isOpen={showAddRepair} title="Uskuna ta'mirini kiritish" onClose={() => setShowAddRepair(false)} size="md">
         <form className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#0F172A] mb-2">Equipment *</label>
+            <label className="block text-sm font-medium text-[#0F172A] dark:text-slate-100 mb-2">Uskuna *</label>
             <SelectField
               value={""}
               onChange={() => {}}
               options={[
-                { value: "Kiln Furnace", label: "Kiln Furnace" },
-                { value: "Crusher Mill", label: "Crusher Mill" },
-                { value: "Conveyor Belt", label: "Conveyor Belt" },
-                { value: "Cement Storage Tank", label: "Cement Storage Tank" },
+                { value: "Pech", label: "Pech" },
+                { value: "Tegirmon", label: "Tegirmon" },
+                { value: "Konveyer tasmasi", label: "Konveyer tasmasi" },
+                { value: "Sement saqlash baki", label: "Sement saqlash baki" },
               ]}
-              placeholder="Select equipment"
+              placeholder="Uskunani tanlang"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#0F172A] mb-2">Issue Description *</label>
+            <label className="block text-sm font-medium text-[#0F172A] dark:text-slate-100 mb-2">Muammo tavsifi *</label>
             <textarea
-              placeholder="Describe the issue"
+              placeholder="Muammoni yozing"
               className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
               rows={3}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#0F172A] mb-2">Repair Date *</label>
+            <label className="block text-sm font-medium text-[#0F172A] dark:text-slate-100 mb-2">Ta'mirlash sanasi *</label>
             <input
               type="date"
               defaultValue={getTodayDateString()}
@@ -109,20 +109,20 @@ export default function RepairsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#0F172A] mb-2">Repair Cost (so'm)</label>
+            <label className="block text-sm font-medium text-[#0F172A] dark:text-slate-100 mb-2">Ta'mir xarajati (so'm)</label>
             <input type="number" placeholder="0" className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#0F172A] mb-2">Technician Name</label>
+            <label className="block text-sm font-medium text-[#0F172A] dark:text-slate-100 mb-2">Usta ismi</label>
             <input
               type="text"
-              placeholder="Technician name"
+              placeholder="Usta ismi"
               className="w-full px-4 py-2 border border-[#E2E8F0] rounded-lg"
             />
           </div>
           <div>
             <FileDropzone
-              label="Before/After Photos"
+              label="Oldin/Keyin rasmlar"
               accept="image/*"
               multiple
               valueText={photosText}
@@ -135,12 +135,12 @@ export default function RepairsPage() {
                   setPhotosText(files[0].name)
                   return
                 }
-                setPhotosText(`${files.length} files selected`)
+                setPhotosText(`${files.length} ta fayl tanlandi`)
               }}
             />
           </div>
           <Button type="submit" variant="primary" className="w-full">
-            Log Repair
+            Saqlash
           </Button>
         </form>
       </Modal>

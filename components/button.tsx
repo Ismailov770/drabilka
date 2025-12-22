@@ -1,4 +1,5 @@
 import type React from "react"
+
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "danger" | "outline" | "ghost"
   size?: "sm" | "md" | "lg"
@@ -16,15 +17,15 @@ const variants = {
 }
 
 const sizes = {
-  sm: "px-3 py-1.5 text-xs md:text-sm",
-  md: "px-4 py-2 text-sm md:text-base",
-  lg: "px-6 py-3 text-base md:text-lg",
+  sm: "h-8 px-3 text-xs md:text-sm",
+  md: "h-9 px-4 text-sm md:text-base",
+  lg: "h-10 px-6 text-base md:text-lg",
 }
 
 export function Button({ variant = "primary", size = "md", children, disabled, className = "", ...props }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring focus-visible:ring-offset-background ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring focus-visible:ring-offset-background ${variants[variant]} ${sizes[size]} ${className}`}
       disabled={disabled}
       {...props}
     >

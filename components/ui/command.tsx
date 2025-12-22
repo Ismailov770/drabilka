@@ -4,7 +4,7 @@ import * as React from 'react'
 import { Command as CommandPrimitive } from 'cmdk'
 import { SearchIcon } from 'lucide-react'
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/styles/lib/utils'
 import {
   Dialog,
   DialogContent,
@@ -30,8 +30,8 @@ function Command({
 }
 
 function CommandDialog({
-  title = 'Command Palette',
-  description = 'Search for a command to run...',
+  title = 'Buyruqlar paneli',
+  description = 'Bajarish uchun buyruqni qidiring...',
   children,
   className,
   showCloseButton = true,
