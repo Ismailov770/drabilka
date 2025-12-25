@@ -44,6 +44,11 @@ export function LprFilters({ value, onChange, onSearch, onReset, onRefresh, isLo
             placeholder="01A234BC"
             value={value.plate}
             onChange={(e) => onChange({ ...value, plate: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                onSearch()
+              }
+            }}
           />
         </div>
       </div>

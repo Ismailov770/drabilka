@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { format } from "date-fns"
 import { ImageOff } from "lucide-react"
 
@@ -26,7 +26,9 @@ function formatCapturedAt(value: string): string {
 function Thumbnail({ src, alt }: { src: string; alt: string }) {
   const [error, setError] = useState(false)
 
-  const key = useMemo(() => src, [src])
+  useEffect(() => {
+    setError(false)
+  }, [src])
 
   if (error) {
     return (
@@ -39,7 +41,7 @@ function Thumbnail({ src, alt }: { src: string; alt: string }) {
 
   return (
     <img
-      key={key}
+      key={src}
       src={src}
       alt={alt}
       crossOrigin="anonymous"
@@ -58,7 +60,6 @@ export function LprTable({ records, onPreview }: LprTableProps) {
             <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Rasm</th>
             <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Raqam</th>
             <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Vaqt</th>
-            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Fayl</th>
           </tr>
         </thead>
         <tbody>
@@ -83,10 +84,6 @@ export function LprTable({ records, onPreview }: LprTableProps) {
                   {r.plateNumber && r.plateNumber.length > 0 ? r.plateNumber : "—"}
                 </td>
                 <td className="px-6 py-4 text-sm text-slate-900 dark:text-slate-100">{formatCapturedAt(r.capturedAt)}</td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-slate-900 dark:text-slate-100">{r.filename}</div>
-                  <div className="text-xs text-slate-500 mt-1">{r.imageUrl}</div>
-                </td>
               </tr>
             )
           })}

@@ -16,7 +16,7 @@ import { LprTable } from "@/components/lpr/LprTable"
 const defaultLimit = 50
 
 function normalizePlate(value: string): string {
-  return value.trim()
+  return value.trim().replace(/\s+/g, "").toUpperCase()
 }
 
 export function LprPage() {
@@ -40,6 +40,7 @@ export function LprPage() {
   const [error, setError] = useState<string | null>(null)
 
   const requestSeqRef = useRef(0)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const [preview, setPreview] = useState<{ title: string; url: string } | null>(null)
 
@@ -61,14 +62,19 @@ export function LprPage() {
     requestSeqRef.current += 1
     const seq = requestSeqRef.current
 
+    abortControllerRef.current?.abort()
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
     setIsLoading(true)
     setError(null)
 
     try {
-      const data = await fetchLprRecords(requestParams)
+      const data = await fetchLprRecords(requestParams, controller.signal)
       if (seq !== requestSeqRef.current) return
       setRecords(Array.isArray(data) ? data : [])
     } catch (err: any) {
+      if (controller.signal.aborted) return
       if (seq !== requestSeqRef.current) return
       if (err instanceof ApiError) {
         const backendMessage =
@@ -89,35 +95,36 @@ export function LprPage() {
     load()
     return () => {
       requestSeqRef.current += 1
+      abortControllerRef.current?.abort()
     }
   }, [load])
 
-  const onSearch = () => {
+  const onSearch = useCallback(() => {
     setOffset(0)
     setAppliedFilters(filters)
-  }
+  }, [filters])
 
-  const onReset = () => {
+  const onReset = useCallback(() => {
     setFilters({ dateFrom: "", dateTo: "", plate: "" })
     setOffset(0)
     setAppliedFilters({ dateFrom: "", dateTo: "", plate: "" })
-  }
+  }, [])
 
-  const onRefresh = () => {
+  const onRefresh = useCallback(() => {
     load()
-  }
+  }, [load])
 
-  const openPreview = (record: LprRecordResponse) => {
+  const openPreview = useCallback((record: LprRecordResponse) => {
     setPreview({
       title: record.plateNumber && record.plateNumber.length > 0 ? record.plateNumber : record.filename,
       url: toFullLprImageUrl(record.imageUrl),
     })
-  }
+  }, [])
 
-  const onLimitChange = (nextLimit: number) => {
+  const onLimitChange = useCallback((nextLimit: number) => {
     setOffset(0)
     setLimit(nextLimit)
-  }
+  }, [])
 
   return (
     <div className="space-y-6">
